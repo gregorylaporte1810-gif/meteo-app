@@ -77,6 +77,7 @@ btnFav.addEventListener("click", () => {
 });
 
 // --- CHARGEMENT MÉTÉO ---
+// --- CHARGEMENT MÉTÉO ---
 async function chargerMeteoParNom(nom) {
   if (!nom.trim()) return;
   messageStatut.textContent = `Recherche de "${nom}"...`;
@@ -91,8 +92,13 @@ async function chargerMeteoParNom(nom) {
     }
     const ville = results[0];
     villeActuelleNom = ville.name;
-    inputVille.value = ville.name; // Garde le nom propre dans la barre
-    const nomComplet = `${ville.name}, ${ville.country || ""}`;
+    
+    // On vide la barre de recherche après validation
+    inputVille.value = ""; 
+
+    // Récupération du code postal si présent dans les données Open-Météo
+    const codePostal = (ville.postcodes && ville.postcodes.length > 0) ? ` (${ville.postcodes[0]})` : "";
+    const nomComplet = `${ville.name}${codePostal}, ${ville.country || ""}`;
 
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
     afficherMeteoActuelle(data, nomComplet);
@@ -124,10 +130,15 @@ inputVille.addEventListener("input", () => {
       return;
     }
 
-    suggestionsList.innerHTML = suggestions.map(s => `
-      <div class="suggestion-item" data-name="${s.name}">${s.name} (${s.country || ""})</div>
-    `).join('');
-    suggestionsList.style.display = "block";
+    // Remplace le bloc d'affichage des suggestions par :
+suggestionsList.innerHTML = suggestions.map(s => {
+  const cp = (s.postcodes && s.postcodes.length > 0) ? ` (${s.postcodes[0]})` : "";
+  return `
+    <div class="suggestion-item" data-name="${s.name}">
+      ${s.name}${cp}, ${s.country || ""}
+    </div>
+  `;
+}).join('');
 
     document.querySelectorAll(".suggestion-item").forEach(item => {
       item.addEventListener("click", () => {
