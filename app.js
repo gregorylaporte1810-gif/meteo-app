@@ -120,37 +120,48 @@ inputVille.addEventListener("input", () => {
 
   if (requete.length < 2) {
     suggestionsList.style.display = "none";
+    suggestionsList.innerHTML = "";
     return;
   }
 
   debounceTimer = setTimeout(async () => {
-    const suggestions = await fetchCoordonnees(requete);
-    if (suggestions.length === 0) {
-      suggestionsList.style.display = "none";
-      return;
-    }
-
-    // Remplace le bloc d'affichage des suggestions par :
-suggestionsList.innerHTML = suggestions.map(s => {
-  const cp = (s.postcodes && s.postcodes.length > 0) ? ` (${s.postcodes[0]})` : "";
-  return `
-    <div class="suggestion-item" data-name="${s.name}">
-      ${s.name}${cp}, ${s.country || ""}
-    </div>
-  `;
-}).join('');
-
-    document.querySelectorAll(".suggestion-item").forEach(item => {
-      item.addEventListener("click", () => {
-        inputVille.value = item.dataset.name;
+    try {
+      const suggestions = await fetchCoordonnees(requete);
+      
+      if (!suggestions || suggestions.length === 0) {
         suggestionsList.style.display = "none";
-        chargerMeteoParNom(item.dataset.name);
+        suggestionsList.innerHTML = "";
+        return;
+      }
+
+      suggestionsList.innerHTML = suggestions.map(s => {
+        const cp = (s.postcodes && s.postcodes.length > 0) ? ` (${s.postcodes[0]})` : "";
+        return `
+          <div class="suggestion-item" data-name="${s.name}">
+            ${s.name}${cp}, ${s.country || ""}
+          </div>
+        `;
+      }).join('');
+
+      suggestionsList.style.display = "block";
+
+      // Gestion du clic sur une suggestion
+      suggestionsList.querySelectorAll(".suggestion-item").forEach(item => {
+        item.addEventListener("click", () => {
+          const villeChoisie = item.dataset.name;
+          suggestionsList.style.display = "none";
+          suggestionsList.innerHTML = "";
+          chargerMeteoParNom(villeChoisie);
+        });
       });
-    });
+    } catch (err) {
+      console.error("Erreur autocomplétion :", err);
+      suggestionsList.style.display = "none";
+    }
   }, 250);
 });
 
-// Masquer les suggestions au clic en dehors
+// Masquer les suggestions si on clique en dehors
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".search-container")) {
     suggestionsList.style.display = "none";

@@ -34,7 +34,9 @@ body {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
-.search-container { position: relative; }
+.search-container { position: relative;
+width: 100%;
+}
 
 .search-box {
   display: flex;
@@ -68,19 +70,28 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-  z-index: 10;
+  margin-top: 6px;
+  max-height: 200px;
+  z-index: 1000;
   display: none;
   overflow: hidden;
+  overflow-y: auto;
 }
 
 .suggestion-item {
   padding: 10px 14px;
   font-size: 0.9em;
   cursor: pointer;
-  border-bottom: 1px solid #f1f2f6;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333333;
+  text-align: left;
 }
 
 .suggestion-item:hover { background: #f1f2f6; }
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
 
 .favoris-bar {
   display: flex;
