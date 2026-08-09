@@ -157,8 +157,19 @@ function ouvrirModale(titre, htmlContent) {
 
 function configurerInteractionsModales() {
   const modal = document.querySelector("#modal-details");
-  document.querySelector("#modal-close").onclick = () => modal.style.display = "none";
-  window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+  const modalClose = document.querySelector("#modal-close");
+
+  const fermer = () => { modal.style.display = "none"; };
+
+  modalClose.onclick = fermer;
+  
+  // Ferme en cliquant ou touchant n'importe où en dehors de la boîte
+  modal.onclick = (e) => {
+    if (e.target === modal) fermer();
+  };
+  modal.ontouchstart = (e) => {
+    if (e.target === modal) fermer();
+  };
 
   document.querySelector("#hero-meteo").onclick = () => {
     const hourly = donneesGlobales.hourly;

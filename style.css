@@ -84,7 +84,7 @@ body {
 
 .favoris-bar {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
@@ -94,7 +94,31 @@ body {
   padding: 4px 10px;
   border-radius: 14px;
   font-size: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fav-badge:hover {
+  background: #dfe6e9;
+}
+
+.fav-label {
+  font-weight: 500;
+}
+
+.fav-delete {
+  color: #e74c3c;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.fav-delete:hover {
+  color: #c0392b;
 }
 
 .header-city {

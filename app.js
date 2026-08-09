@@ -20,28 +20,58 @@ function getFavoris() {
 function sauvegarderFavoris(favoris) {
   localStorage.setItem("favoris_meteo", JSON.stringify(favoris));
   afficherFavoris();
+  actualiserBoutonFavori();
+}
+
+function actualiserBoutonFavori() {
+  if (!btnFav) return;
+  const favoris = getFavoris();
+  if (favoris.includes(villeActuelleNom)) {
+    btnFav.textContent = "⭐";
+    btnFav.title = "Retirer des favoris";
+  } else {
+    btnFav.textContent = "☆";
+    btnFav.title = "Ajouter aux favoris";
+  }
 }
 
 function afficherFavoris() {
   const favoris = getFavoris();
-  favorisBar.innerHTML = favoris.map(v => `<span class="fav-badge">${v}</span>`).join('');
+  favorisBar.innerHTML = favoris.map(v => `
+    <span class="fav-badge">
+      <span class="fav-label">${v}</span>
+      <span class="fav-delete" data-ville="${v}" title="Supprimer">×</span>
+    </span>
+  `).join('');
   
-  document.querySelectorAll(".fav-badge").forEach(badge => {
-    badge.addEventListener("click", () => chargerMeteoParNom(badge.textContent));
+  // Clic sur le nom pour charger la météo
+  document.querySelectorAll(".fav-label").forEach(label => {
+    label.addEventListener("click", () => {
+      inputVille.value = label.textContent;
+      chargerMeteoParNom(label.textContent);
+    });
+  });
+
+  // Clic sur la croix pour supprimer le favori
+  document.querySelectorAll(".fav-delete").forEach(delBtn => {
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const villeASupprimer = delBtn.dataset.ville;
+      const liste = getFavoris().filter(v => v !== villeASupprimer);
+      sauvegarderFavoris(liste);
+    });
   });
 }
 
 btnFav.addEventListener("click", () => {
-  if (!villeActuelleNom) return;
+  if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
   const favoris = getFavoris();
   const index = favoris.indexOf(villeActuelleNom);
   
   if (index === -1) {
     favoris.push(villeActuelleNom);
-    alert(`${villeActuelleNom} ajouté aux favoris !`);
   } else {
     favoris.splice(index, 1);
-    alert(`${villeActuelleNom} retiré des favoris.`);
   }
   sauvegarderFavoris(favoris);
 });
@@ -61,14 +91,16 @@ async function chargerMeteoParNom(nom) {
     }
     const ville = results[0];
     villeActuelleNom = ville.name;
+    inputVille.value = ville.name; // Garde le nom propre dans la barre
     const nomComplet = `${ville.name}, ${ville.country || ""}`;
 
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
     afficherMeteoActuelle(data, nomComplet);
     afficherPrevisions(data.daily);
-    afficherAlertePluie(data.hourly, data.minutely_15);
+    afficherAlertePluie(data.hourly);
+    actualiserBoutonFavori();
 
-    localStorage.setItem("derniere_ville", nom);
+    localStorage.setItem("derniere_ville", ville.name);
   } catch (err) {
     messageStatut.textContent = "Erreur de chargement.";
     console.error(err);
@@ -100,16 +132,27 @@ inputVille.addEventListener("input", () => {
     document.querySelectorAll(".suggestion-item").forEach(item => {
       item.addEventListener("click", () => {
         inputVille.value = item.dataset.name;
+        suggestionsList.style.display = "none";
         chargerMeteoParNom(item.dataset.name);
       });
     });
-  }, 300);
+  }, 250);
+});
+
+// Masquer les suggestions au clic en dehors
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".search-container")) {
+    suggestionsList.style.display = "none";
+  }
 });
 
 // --- ÉVÉNEMENTS GLOBAUX ---
 btnRechercher.addEventListener("click", () => chargerMeteoParNom(inputVille.value));
 inputVille.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") chargerMeteoParNom(inputVille.value);
+  if (e.key === "Enter") {
+    suggestionsList.style.display = "none";
+    chargerMeteoParNom(inputVille.value);
+  }
 });
 
 btnGeoloc.addEventListener("click", () => {
@@ -117,9 +160,11 @@ btnGeoloc.addEventListener("click", () => {
     const { latitude, longitude } = pos.coords;
     const data = await fetchMeteoComplete(latitude, longitude);
     villeActuelleNom = "Ma position";
+    inputVille.value = "";
     afficherMeteoActuelle(data, "Ma position actuelle");
     afficherPrevisions(data.daily);
-    afficherAlertePluie(data.hourly, data.minutely_15);
+    afficherAlertePluie(data.hourly);
+    actualiserBoutonFavori();
   });
 });
 
@@ -130,4 +175,5 @@ if ('serviceWorker' in navigator) {
 // Lancement initial
 afficherFavoris();
 const villeInitiale = localStorage.getItem("derniere_ville") || "Paris";
+inputVille.value = villeInitiale;
 chargerMeteoParNom(villeInitiale);
