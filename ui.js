@@ -23,21 +23,29 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#vent").textContent = `${current.wind_speed_10m} km/h`;
   document.querySelector("#humidite").textContent = `${current.relative_humidity_2m}%`;
 
-  const coucher = daily && daily.sunset ? daily.sunset[0].split("T")[1] : "--:--";
+  const coucher = daily && daily.sunset && daily.sunset[0] ? daily.sunset[0].split("T")[1] : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
 
   const uvActuel = current.uv_index !== undefined ? Math.round(current.uv_index) : 0;
   document.querySelector("#indice-uv").textContent = `${uvActuel} / 11`;
 
-  let codeInfo = codesMeteo[current.weather_code] || { texte: "Variable", icone: "🌡️" };
+  let codeMeteo = current.weather_code;
+
+  // Détection en direct : s'il pleut physiquement (pluie > 0)
+  const ilPleutVraiment = (current.precipitation > 0) || (current.rain > 0) || (current.showers > 0);
+  if (ilPleutVraiment && [0, 1, 2, 3].includes(codeMeteo)) {
+    codeMeteo = 61; // Affiche Pluie
+  }
+
+  let codeInfo = codesMeteo[codeMeteo] || { texte: "Variable", icone: "🌡️" };
   let iconeAffichee = codeInfo.icone;
-  if (!current.is_day && [0, 1].includes(current.weather_code)) iconeAffichee = "🌙";
+  if (!current.is_day && [0, 1].includes(codeMeteo)) iconeAffichee = "🌙";
 
   document.querySelector("#description").textContent = codeInfo.texte;
   document.querySelector("#icone").textContent = iconeAffichee;
 
-  genererConseilsPratiques(current.temperature_2m, current.weather_code, current.wind_speed_10m, uvActuel, current.is_day);
-  adapterFond(current.weather_code, current.is_day);
+  genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, current.is_day);
+  adapterFond(codeMeteo, current.is_day);
 
   document.querySelector("#bloc-meteo").style.display = "block";
   document.querySelector("#message-statut").style.display = "none";
@@ -67,12 +75,12 @@ function genererConseilsPratiques(temp, code, vent, uv, isDay) {
 
 export function afficherPrevisions(daily) {
   const conteneur = document.querySelector("#previsions-7-jours");
-  if (!conteneur) return;
+  if (!conteneur || !daily || !daily.time) return;
 
   conteneur.innerHTML = daily.time.map((date, index) => {
     if (index === 0) return "";
-    const max = Math.round(daily.temperature_2m_max[index]);
-    const min = Math.round(daily.temperature_2m_min[index]);
+    const max = daily.temperature_2m_max[index] !== undefined && daily.temperature_2m_max[index] !== null ? Math.round(daily.temperature_2m_max[index]) : "--";
+    const min = daily.temperature_2m_min[index] !== undefined && daily.temperature_2m_min[index] !== null ? Math.round(daily.temperature_2m_min[index]) : "--";
     const code = daily.weather_code[index];
     const icone = (codesMeteo[code] || {}).icone || "🌡️";
     const jour = new Date(date).toLocaleDateString('fr-FR', { weekday: 'short' });
@@ -89,34 +97,58 @@ export function afficherPrevisions(daily) {
 
 export function afficherAlertePluie(hourly) {
   const conteneur = document.querySelector("#alerte-pluie");
-  if (!conteneur || !hourly) return;
+  if (!conteneur || !hourly || !hourly.time) return;
 
+  const codesPluie = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95];
   const maintenant = new Date();
-  const heureIndex = hourly.time.findIndex(t => new Date(t) >= maintenant);
-  if (heureIndex === -1) {
-    conteneur.textContent = "";
+
+  // 1. Trouver l'index le plus proche de l'instant présent
+  let indexBase = 0;
+  let ecartMin = Infinity;
+  hourly.time.forEach((t, index) => {
+    const diff = Math.abs(new Date(t) - maintenant);
+    if (diff < ecartMin) {
+      ecartMin = diff;
+      indexBase = index;
+    }
+  });
+
+  // 2. Vérification immédiate : heure en cours et heure suivante immédiate
+  const fenetreActuelle = [indexBase, indexBase + 1].filter(idx => idx < hourly.weather_code.length);
+  const pluieImminente = fenetreActuelle.some(i => {
+    const code = hourly.weather_code[i];
+    const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
+    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    return codesPluie.includes(code) || precip > 0.05 || proba >= 35;
+  });
+
+  if (pluieImminente) {
+    conteneur.textContent = "🌧️ Pluie ou averses en cours / imminentes.";
     return;
   }
 
-  const codesPluie = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95];
-  let indexPluie = -1;
+  // 3. Recherche au-delà de la première heure
+  let indexProchaine = -1;
+  for (let i = indexBase + 2; i < indexBase + 12 && i < hourly.weather_code.length; i++) {
+    const code = hourly.weather_code[i];
+    const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
+    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
 
-  for (let i = heureIndex; i < heureIndex + 24 && i < hourly.weather_code.length; i++) {
-    if (codesPluie.includes(hourly.weather_code[i])) {
-      indexPluie = i;
+    if (codesPluie.includes(code) || precip > 0.1 || proba >= 35) {
+      indexProchaine = i;
       break;
     }
   }
 
-  if (indexPluie !== -1) {
-    const diff = Math.round((new Date(hourly.time[indexPluie]) - maintenant) / 3600000);
-    conteneur.textContent = diff <= 0 ? "🌧️ Pluie en cours ou imminente !" : `⚠️ Risque de pluie dans environ ${diff}h.`;
+  if (indexProchaine !== -1) {
+    const diffHeures = indexProchaine - indexBase;
+    conteneur.textContent = `⚠️ Risque de pluie dans environ ${diffHeures}h.`;
   } else {
     conteneur.textContent = "";
   }
 }
 
-// --- GESTION DES MODALES DÉTAILLÉES ---
+// --- MODALES DÉTAILLÉES ---
 function ouvrirModale(titre, htmlContent) {
   document.querySelector("#modal-titre").textContent = titre;
   document.querySelector("#modal-body").innerHTML = htmlContent;
@@ -128,7 +160,6 @@ function configurerInteractionsModales() {
   document.querySelector("#modal-close").onclick = () => modal.style.display = "none";
   window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
-  // 1. Clic sur le Bloc Central : Détails heure par heure
   document.querySelector("#hero-meteo").onclick = () => {
     const hourly = donneesGlobales.hourly;
     const maintenant = new Date();
@@ -155,7 +186,6 @@ function configurerInteractionsModales() {
     ouvrirModale("Prévisions des prochaines heures", `<div class="hourly-scroll">${cartesHoraires}</div>`);
   };
 
-  // 2. Clic sur le Vent : Détails Rafales & Pression
   document.querySelector("#card-vent").onclick = () => {
     const c = donneesGlobales.current;
     const html = `
@@ -169,7 +199,6 @@ function configurerInteractionsModales() {
     ouvrirModale("Détails du Vent & Atmosphère", html);
   };
 
-  // 3. Clic sur le Soleil : Lever / Coucher
   document.querySelector("#card-soleil").onclick = () => {
     const d = donneesGlobales.daily;
     const lever = d.sunrise[0].split("T")[1];
@@ -184,7 +213,6 @@ function configurerInteractionsModales() {
     ouvrirModale("Cycle Solaire", html);
   };
 
-  // 4. Clic sur l'Humidité & UV
   document.querySelector("#card-humidite").onclick = () => {
     const c = donneesGlobales.current;
     const html = `

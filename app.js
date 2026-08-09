@@ -66,7 +66,7 @@ async function chargerMeteoParNom(nom) {
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
     afficherMeteoActuelle(data, nomComplet);
     afficherPrevisions(data.daily);
-    afficherAlertePluie(data.hourly);
+    afficherAlertePluie(data.hourly, data.minutely_15);
 
     localStorage.setItem("derniere_ville", nom);
   } catch (err) {
@@ -119,7 +119,7 @@ btnGeoloc.addEventListener("click", () => {
     villeActuelleNom = "Ma position";
     afficherMeteoActuelle(data, "Ma position actuelle");
     afficherPrevisions(data.daily);
-    afficherAlertePluie(data.hourly);
+    afficherAlertePluie(data.hourly, data.minutely_15);
   });
 });
 
