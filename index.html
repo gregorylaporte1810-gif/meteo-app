@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Météo Pro & Détaillée</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2c3e50">
+</head>
+
+<body>
+
+  <div class="weather-card">
+
+    <!-- Barre de recherche -->
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" id="input-ville" placeholder="Rechercher une ville..." autocomplete="off">
+        <button id="btn-rechercher">🔍</button>
+        <button id="btn-geoloc" class="btn-geo" title="Me géolocaliser">📍</button>
+      </div>
+      <div id="suggestions-list" class="suggestions-list"></div>
+    </div>
+
+    <!-- Barre des favoris -->
+    <div id="favoris-bar" class="favoris-bar"></div>
+
+    <p id="message-statut" class="status-message">Chargement...</p>
+
+    <!-- Bloc météo principal -->
+    <div id="bloc-meteo" class="weather-info" style="display: none;">
+
+      <div class="header-city">
+        <div id="ville" class="city-name">Paris</div>
+        <button id="btn-toggle-favori" class="btn-fav" title="Favori">⭐</button>
+      </div>
+
+      <div id="previsions-7-jours" class="previsions-grid"></div>
+
+      <!-- Bloc central cliquable pour voir le détail horaire -->
+      <div id="hero-meteo" class="hero-meteo" title="Cliquez pour voir les prévisions heure par heure">
+        <div id="icone" class="weather-icon">☀️</div>
+        <div id="temperature" class="temp">22°C</div>
+        <div id="description" class="description">Ciel dégagé</div>
+        <small class="hint-click">👆 Voir l'évolution par heure</small>
+      </div>
+
+      <div id="alerte-pluie" class="alerte-pluie"></div>
+
+      <!-- Conseils intelligents -->
+      <div id="conseils-box" class="conseils-box"></div>
+
+      <!-- Grille interactive des détails -->
+      <div class="details-grid">
+        <div class="detail-item clickable" id="card-vent" title="Voir les détails du vent">
+          <span class="detail-label">💨 Vent</span>
+          <span id="vent" class="detail-value">-- km/h</span>
+        </div>
+        <div class="detail-item clickable" id="card-humidite" title="Voir les détails de l'air">
+          <span class="detail-label">💧 Humidité</span>
+          <span id="humidite" class="detail-value">--%</span>
+        </div>
+        <div class="detail-item clickable" id="card-soleil" title="Voir le lever et coucher du soleil">
+          <span class="detail-label">🌅 Soleil</span>
+          <span id="soleil-apercu" class="detail-value">--:--</span>
+        </div>
+        <div class="detail-item clickable" id="card-uv" title="Voir les détails UV">
+          <span class="detail-label">☀️ Indice UV</span>
+          <span id="indice-uv" class="detail-value">--</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Fenêtre modale universelle pour les détails -->
+  <div id="modal-details" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span id="modal-close" class="modal-close">&times;</span>
+      <h3 id="modal-titre">Détails</h3>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+
+</html>
