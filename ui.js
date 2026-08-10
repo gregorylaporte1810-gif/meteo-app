@@ -233,23 +233,26 @@ function configurerInteractionsModales() {
 }
 
 function adapterFond(code, isDay = 1) {
-  const body = document.body;
+  let fond = "";
   if (!isDay) {
-    body.style.background = "linear-gradient(135deg, #0b131c 0%, #152238 100%)";
+    fond = "linear-gradient(135deg, #0b131c 0%, #152238 100%)";
   } else if ([95, 96, 99].includes(code)) {
     // Orage
-    body.style.background = "linear-gradient(135deg, #1c1e24 0%, #2f3542 100%)";
+    fond = "linear-gradient(135deg, #1c1e24 0%, #2f3542 100%)";
   } else if ([71, 73, 75, 77, 85, 86].includes(code)) {
     // Neige
-    body.style.background = "linear-gradient(135deg, #708090 0%, #a4b0be 100%)";
+    fond = "linear-gradient(135deg, #708090 0%, #a4b0be 100%)";
   } else if ([51, 61, 63].includes(code)) {
     // Pluie
-    body.style.background = "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)";
+    fond = "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)";
   } else if ([0, 1].includes(code)) {
     // Soleil
-    body.style.background = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
+    fond = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
   } else {
     // Nuageux
-    body.style.background = "linear-gradient(135deg, #57606f 0%, #2f3542 100%)";
+    fond = "linear-gradient(135deg, #57606f 0%, #2f3542 100%)";
   }
+
+  document.body.style.background = fond;
+  document.documentElement.style.background = fond; // Applique la couleur à tout l'écran iOS
 }
