@@ -194,19 +194,24 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-// Gestion du Plein Écran
 const btnFullscreen = document.querySelector("#btn-fullscreen");
 if (btnFullscreen) {
   btnFullscreen.addEventListener("click", () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
-        console.warn(`Erreur lors du passage en plein écran: ${err.message}`);
+        console.warn(`Erreur plein écran: ${err.message}`);
       });
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
       }
     }
+  });
+
+  // Met à jour l'icône du bouton selon l'état
+  document.addEventListener("fullscreenchange", () => {
+    btnFullscreen.textContent = document.fullscreenElement ? "🗗" : "⛶";
+    btnFullscreen.title = document.fullscreenElement ? "Quitter le plein écran" : "Plein écran";
   });
 }
 

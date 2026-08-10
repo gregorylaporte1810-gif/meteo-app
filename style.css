@@ -318,3 +318,25 @@ width: 100%;
   background: #f8f9fa;
   border-radius: 8px;
 }
+
+/* Par défaut sur grand écran / PC : on peut élargir la carte */
+@media (min-width: 768px) {
+  .weather-card {
+    max-width: 600px; /* Plus large et plus aéré sur ordi */
+    padding: 32px;
+  }
+}
+
+/* Sur mobile : on masque le bouton plein écran inutile */
+@media (max-width: 767px) {
+  .btn-fullscreen {
+    display: none !important;
+  }
+}
+
+/* Quand l'ordi passe en plein écran : affichage encore plus immersif */
+:fullscreen .weather-card {
+  max-width: 650px;
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
