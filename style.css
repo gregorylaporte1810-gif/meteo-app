@@ -7,15 +7,16 @@
 
 body {
   min-height: 100vh;
+  /* Étend la vue sur tout l'écran de l'iPhone */
+  min-height: -webkit-fill-available;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  background-size: 200% 200%;
-  animation: gradientShift 12s ease infinite;
   padding: 20px;
-  color: #2c3e50;
-  transition: background 0.8s ease;
+  /* Ajoute une marge sous l'heure pour ne pas chevaucher la carte */
+  padding-top: calc(env(safe-area-inset-top, 20px) + 10px);
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+  box-sizing: border-box;
 }
 
 @keyframes gradientShift {
