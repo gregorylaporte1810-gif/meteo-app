@@ -194,6 +194,22 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
+// Gestion du Plein Écran
+const btnFullscreen = document.querySelector("#btn-fullscreen");
+if (btnFullscreen) {
+  btnFullscreen.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn(`Erreur lors du passage en plein écran: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  });
+}
+
 // Lancement initial
 afficherFavoris();
 const villeInitiale = localStorage.getItem("derniere_ville") || "Paris";

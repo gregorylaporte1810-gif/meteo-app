@@ -1,3 +1,5 @@
+import { setWeatherEffect } from './effects.js';
+
 const codesMeteo = {
   0: { texte: "Ciel dégagé", icone: "☀️" },
   1: { texte: "Principalement dégagé", icone: "🌤️" },
@@ -31,10 +33,9 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
   let codeMeteo = current.weather_code;
 
-  // Détection en direct : s'il pleut physiquement (pluie > 0)
   const ilPleutVraiment = (current.precipitation > 0) || (current.rain > 0) || (current.showers > 0);
   if (ilPleutVraiment && [0, 1, 2, 3].includes(codeMeteo)) {
-    codeMeteo = 61; // Affiche Pluie
+    codeMeteo = 61;
   }
 
   let codeInfo = codesMeteo[codeMeteo] || { texte: "Variable", icone: "🌡️" };
@@ -46,6 +47,9 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
   genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, current.is_day);
   adapterFond(codeMeteo, current.is_day);
+  
+  // Déclenche l'animation météo correspondante
+  setWeatherEffect(codeMeteo);
 
   document.querySelector("#bloc-meteo").style.display = "block";
   document.querySelector("#message-statut").style.display = "none";
@@ -102,7 +106,6 @@ export function afficherAlertePluie(hourly) {
   const codesPluie = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95];
   const maintenant = new Date();
 
-  // 1. Trouver l'index le plus proche de l'instant présent
   let indexBase = 0;
   let ecartMin = Infinity;
   hourly.time.forEach((t, index) => {
@@ -113,7 +116,6 @@ export function afficherAlertePluie(hourly) {
     }
   });
 
-  // 2. Vérification immédiate : heure en cours et heure suivante immédiate
   const fenetreActuelle = [indexBase, indexBase + 1].filter(idx => idx < hourly.weather_code.length);
   const pluieImminente = fenetreActuelle.some(i => {
     const code = hourly.weather_code[i];
@@ -127,7 +129,6 @@ export function afficherAlertePluie(hourly) {
     return;
   }
 
-  // 3. Recherche au-delà de la première heure
   let indexProchaine = -1;
   for (let i = indexBase + 2; i < indexBase + 12 && i < hourly.weather_code.length; i++) {
     const code = hourly.weather_code[i];
@@ -148,7 +149,6 @@ export function afficherAlertePluie(hourly) {
   }
 }
 
-// --- MODALES DÉTAILLÉES ---
 function ouvrirModale(titre, htmlContent) {
   document.querySelector("#modal-titre").textContent = titre;
   document.querySelector("#modal-body").innerHTML = htmlContent;
@@ -162,14 +162,8 @@ function configurerInteractionsModales() {
   const fermer = () => { modal.style.display = "none"; };
 
   modalClose.onclick = fermer;
-  
-  // Ferme en cliquant ou touchant n'importe où en dehors de la boîte
-  modal.onclick = (e) => {
-    if (e.target === modal) fermer();
-  };
-  modal.ontouchstart = (e) => {
-    if (e.target === modal) fermer();
-  };
+  modal.onclick = (e) => { if (e.target === modal) fermer(); };
+  modal.ontouchstart = (e) => { if (e.target === modal) fermer(); };
 
   document.querySelector("#hero-meteo").onclick = () => {
     const hourly = donneesGlobales.hourly;
@@ -241,12 +235,21 @@ function configurerInteractionsModales() {
 function adapterFond(code, isDay = 1) {
   const body = document.body;
   if (!isDay) {
-    body.style.background = "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)";
-  } else if ([51, 61, 63, 95].includes(code)) {
-    body.style.background = "linear-gradient(135deg, #3a6073 0%, #3a7bd5 100%)";
+    body.style.background = "linear-gradient(135deg, #0b131c 0%, #152238 100%)";
+  } else if ([95, 96, 99].includes(code)) {
+    // Orage
+    body.style.background = "linear-gradient(135deg, #1c1e24 0%, #2f3542 100%)";
+  } else if ([71, 73, 75, 77, 85, 86].includes(code)) {
+    // Neige
+    body.style.background = "linear-gradient(135deg, #708090 0%, #a4b0be 100%)";
+  } else if ([51, 61, 63].includes(code)) {
+    // Pluie
+    body.style.background = "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)";
   } else if ([0, 1].includes(code)) {
-    body.style.background = "linear-gradient(135deg, #f39c12 0%, #e74c3c 100%)";
+    // Soleil
+    body.style.background = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
   } else {
-    body.style.background = "linear-gradient(135deg, #5D6D7E 0%, #2C3E50 100%)";
+    // Nuageux
+    body.style.background = "linear-gradient(135deg, #57606f 0%, #2f3542 100%)";
   }
 }
