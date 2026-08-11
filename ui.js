@@ -1,4 +1,4 @@
-import { setWeatherEffect } from './effects.js';
+import { setWeatherEffect } from "./effects.js";
 
 const codesMeteo = {
   0: { texte: "Ciel dégagé", icone: "☀️" },
@@ -10,30 +10,42 @@ const codesMeteo = {
   61: { texte: "Pluie modérée", icone: "🌧️" },
   63: { texte: "Forte pluie", icone: "🌧️" },
   71: { texte: "Chutes de neige", icone: "❄️" },
-  95: { texte: "Orage", icone: "⛈️" }
+  95: { texte: "Orage", icone: "⛈️" },
 };
 
 let donneesGlobales = null;
+let horlogeInterval = null;
 
 export function afficherMeteoActuelle(data, nomLieu) {
   donneesGlobales = data;
   const current = data.current;
   const daily = data.daily;
 
-  document.querySelector("#ville").textContent = nomLieu;
-  document.querySelector("#temperature").textContent = `${Math.round(current.temperature_2m)}°C`;
-  document.querySelector("#vent").textContent = `${current.wind_speed_10m} km/h`;
-  document.querySelector("#humidite").textContent = `${current.relative_humidity_2m}%`;
+  // Lancement de l'horloge dynamique avec le fuseau horaire de la ville
+  lancerHorloge(data.timezone);
 
-  const coucher = daily && daily.sunset && daily.sunset[0] ? daily.sunset[0].split("T")[1] : "--:--";
+  document.querySelector("#ville").textContent = nomLieu;
+  document.querySelector("#temperature").textContent =
+    `${Math.round(current.temperature_2m)}°C`;
+  document.querySelector("#vent").textContent =
+    `${current.wind_speed_10m} km/h`;
+  document.querySelector("#humidite").textContent =
+    `${current.relative_humidity_2m}%`;
+
+  const coucher =
+    daily && daily.sunset && daily.sunset[0]
+      ? daily.sunset[0].split("T")[1]
+      : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
 
-  const uvActuel = current.uv_index !== undefined ? Math.round(current.uv_index) : 0;
+  const uvActuel =
+    current.uv_index !== undefined ? Math.round(current.uv_index) : 0;
   document.querySelector("#indice-uv").textContent = `${uvActuel} / 11`;
 
   let codeMeteo = current.weather_code;
 
-  const ilPleutVraiment = (current.precipitation > 0) || (current.rain > 0) || (current.showers > 0);
+  const ilPleutVraiment =
+    current.precipitation > 0 || current.rain > 0 || current.showers > 0;
   if (ilPleutVraiment && [0, 1, 2, 3].includes(codeMeteo)) {
     codeMeteo = 61;
   }
@@ -45,9 +57,15 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#description").textContent = codeInfo.texte;
   document.querySelector("#icone").textContent = iconeAffichee;
 
-  genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, current.is_day);
+  genererConseilsPratiques(
+    current.temperature_2m,
+    codeMeteo,
+    current.wind_speed_10m,
+    uvActuel,
+    current.is_day,
+  );
   adapterFond(codeMeteo, current.is_day);
-  
+
   // Déclenche l'animation météo correspondante
   setWeatherEffect(codeMeteo);
 
@@ -63,40 +81,60 @@ function genererConseilsPratiques(temp, code, vent, uv, isDay) {
   else if (temp < 18) conseils.push("🧥 Veste légère conseillée.");
   else conseils.push("👕 Tenue légère et confortable.");
 
-  if ([51, 61, 63, 80, 95].includes(code)) conseils.push("☔ Prenez un parapluie.");
+  if ([51, 61, 63, 80, 95].includes(code))
+    conseils.push("☔ Prenez un parapluie.");
 
   if (isDay) {
-    if (![51, 61, 63, 95].includes(code) && vent < 25 && temp >= 12 && temp <= 25) {
+    if (
+      ![51, 61, 63, 95].includes(code) &&
+      vent < 25 &&
+      temp >= 12 &&
+      temp <= 25
+    ) {
       conseils.push("🏃 Idéal pour courir ou faire du sport en extérieur.");
     }
-    if (uv >= 6) conseils.push("🧴 Indice UV fort : lunettes et crème recommandées.");
+    if (uv >= 6)
+      conseils.push("🧴 Indice UV fort : lunettes et crème recommandées.");
   } else {
     conseils.push("🌙 Nuit calme : pensez à vous couvrir si vous sortez.");
   }
 
-  document.querySelector("#conseils-box").innerHTML = `<strong>Conseils :</strong><br>${conseils.join("<br>")}`;
+  document.querySelector("#conseils-box").innerHTML =
+    `<strong>Conseils :</strong><br>${conseils.join("<br>")}`;
 }
 
 export function afficherPrevisions(daily) {
   const conteneur = document.querySelector("#previsions-7-jours");
   if (!conteneur || !daily || !daily.time) return;
 
-  conteneur.innerHTML = daily.time.map((date, index) => {
-    if (index === 0) return "";
-    const max = daily.temperature_2m_max[index] !== undefined && daily.temperature_2m_max[index] !== null ? Math.round(daily.temperature_2m_max[index]) : "--";
-    const min = daily.temperature_2m_min[index] !== undefined && daily.temperature_2m_min[index] !== null ? Math.round(daily.temperature_2m_min[index]) : "--";
-    const code = daily.weather_code[index];
-    const icone = (codesMeteo[code] || {}).icone || "🌡️";
-    const jour = new Date(date).toLocaleDateString('fr-FR', { weekday: 'short' });
+  conteneur.innerHTML = daily.time
+    .map((date, index) => {
+      if (index === 0) return "";
+      const max =
+        daily.temperature_2m_max[index] !== undefined &&
+        daily.temperature_2m_max[index] !== null
+          ? Math.round(daily.temperature_2m_max[index])
+          : "--";
+      const min =
+        daily.temperature_2m_min[index] !== undefined &&
+        daily.temperature_2m_min[index] !== null
+          ? Math.round(daily.temperature_2m_min[index])
+          : "--";
+      const code = daily.weather_code[index];
+      const icone = (codesMeteo[code] || {}).icone || "🌡️";
+      const jour = new Date(date).toLocaleDateString("fr-FR", {
+        weekday: "short",
+      });
 
-    return `
+      return `
       <div class="prevision-item">
         <span>${jour}</span>
         <span>${icone}</span>
         <span>${max}°/${min}°</span>
       </div>
     `;
-  }).join('');
+    })
+    .join("");
 }
 
 export function afficherAlertePluie(hourly) {
@@ -116,11 +154,15 @@ export function afficherAlertePluie(hourly) {
     }
   });
 
-  const fenetreActuelle = [indexBase, indexBase + 1].filter(idx => idx < hourly.weather_code.length);
-  const pluieImminente = fenetreActuelle.some(i => {
+  const fenetreActuelle = [indexBase, indexBase + 1].filter(
+    (idx) => idx < hourly.weather_code.length,
+  );
+  const pluieImminente = fenetreActuelle.some((i) => {
     const code = hourly.weather_code[i];
     const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
-    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    const proba = hourly.precipitation_probability
+      ? hourly.precipitation_probability[i]
+      : 0;
     return codesPluie.includes(code) || precip > 0.05 || proba >= 35;
   });
 
@@ -130,10 +172,16 @@ export function afficherAlertePluie(hourly) {
   }
 
   let indexProchaine = -1;
-  for (let i = indexBase + 2; i < indexBase + 12 && i < hourly.weather_code.length; i++) {
+  for (
+    let i = indexBase + 2;
+    i < indexBase + 12 && i < hourly.weather_code.length;
+    i++
+  ) {
     const code = hourly.weather_code[i];
     const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
-    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    const proba = hourly.precipitation_probability
+      ? hourly.precipitation_probability[i]
+      : 0;
 
     if (codesPluie.includes(code) || precip > 0.1 || proba >= 35) {
       indexProchaine = i;
@@ -159,26 +207,36 @@ function configurerInteractionsModales() {
   const modal = document.querySelector("#modal-details");
   const modalClose = document.querySelector("#modal-close");
 
-  const fermer = () => { modal.style.display = "none"; };
+  const fermer = () => {
+    modal.style.display = "none";
+  };
 
   modalClose.onclick = fermer;
-  modal.onclick = (e) => { if (e.target === modal) fermer(); };
-  modal.ontouchstart = (e) => { if (e.target === modal) fermer(); };
+  modal.onclick = (e) => {
+    if (e.target === modal) fermer();
+  };
+  modal.ontouchstart = (e) => {
+    if (e.target === modal) fermer();
+  };
 
   document.querySelector("#hero-meteo").onclick = () => {
     const hourly = donneesGlobales.hourly;
     const maintenant = new Date();
-    const startIndex = hourly.time.findIndex(t => new Date(t) >= maintenant);
-    
-    const cartesHoraires = hourly.time.slice(startIndex, startIndex + 18).map((time, i) => {
-      const idx = startIndex + i;
-      const heure = new Date(time).getHours() + "h";
-      const temp = Math.round(hourly.temperature_2m[idx]);
-      const code = hourly.weather_code[idx];
-      const proba = hourly.precipitation_probability ? hourly.precipitation_probability[idx] : 0;
-      const icone = (codesMeteo[code] || {}).icone || "🌡️";
+    const startIndex = hourly.time.findIndex((t) => new Date(t) >= maintenant);
 
-      return `
+    const cartesHoraires = hourly.time
+      .slice(startIndex, startIndex + 18)
+      .map((time, i) => {
+        const idx = startIndex + i;
+        const heure = new Date(time).getHours() + "h";
+        const temp = Math.round(hourly.temperature_2m[idx]);
+        const code = hourly.weather_code[idx];
+        const proba = hourly.precipitation_probability
+          ? hourly.precipitation_probability[idx]
+          : 0;
+        const icone = (codesMeteo[code] || {}).icone || "🌡️";
+
+        return `
         <div class="hourly-card">
           <span>${heure}</span>
           <span style="font-size: 1.3em;">${icone}</span>
@@ -186,9 +244,13 @@ function configurerInteractionsModales() {
           <small style="color: #2980b9;">💧${proba}%</small>
         </div>
       `;
-    }).join('');
+      })
+      .join("");
 
-    ouvrirModale("Prévisions des prochaines heures", `<div class="hourly-scroll">${cartesHoraires}</div>`);
+    ouvrirModale(
+      "Prévisions des prochaines heures",
+      `<div class="hourly-scroll">${cartesHoraires}</div>`,
+    );
   };
 
   document.querySelector("#card-vent").onclick = () => {
@@ -229,7 +291,8 @@ function configurerInteractionsModales() {
     ouvrirModale("Ressenti & Humidité", html);
   };
 
-  document.querySelector("#card-uv").onclick = document.querySelector("#card-soleil").onclick;
+  document.querySelector("#card-uv").onclick =
+    document.querySelector("#card-soleil").onclick;
 }
 
 function adapterFond(code, isDay = 1) {
@@ -255,4 +318,31 @@ function adapterFond(code, isDay = 1) {
 
   document.body.style.background = fond;
   document.documentElement.style.background = fond; // Applique la couleur à tout l'écran iOS
+}
+
+// Gère l'affichage en temps réel de l'heure locale de la ville
+function lancerHorloge(tz) {
+  if (horlogeInterval) clearInterval(horlogeInterval);
+  const affichageDate = document.querySelector("#date-heure");
+  if (!tz || !affichageDate) return;
+
+  const maj = () => {
+
+    const now = new Date(); 
+    
+    // Options de formatage de la date locale
+    const options = { 
+      timeZone: tz, 
+      weekday: 'long', day: 'numeric', month: 'long', 
+      hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    };
+    // On met la première lettre en majuscule
+    let texteDate = now.toLocaleString('fr-FR', options);
+    texteDate = texteDate.charAt(0).toUpperCase() + texteDate.slice(1);
+    
+    affichageDate.textContent = texteDate;
+  };
+  
+  maj(); // Affichage immédiat
+  horlogeInterval = setInterval(maj, 1000); // Mise à jour chaque seconde
 }
