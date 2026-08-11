@@ -11,3 +11,18 @@ export async function fetchMeteoComplete(lat, lon) {
   const reponse = await fetch(url);
   return await reponse.json();
 }
+
+// Permet de trouver le nom du pays/ville lorsqu'on clique sur la carte
+export async function fetchNomParCoordonnees(lat, lon) {
+  try {
+    // API gratuite OpenStreetMap (Nominatim) zoom=3 donne le pays
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&accept-language=fr`;
+    const reponse = await fetch(url);
+    const data = await reponse.json();
+    return data.address
+      ? data.address.country || data.address.city || "Zone inconnue"
+      : "Océan / Inconnu";
+  } catch (err) {
+    return "Lieu sélectionné";
+  }
+}

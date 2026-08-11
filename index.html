@@ -18,6 +18,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Météo">
+  <!-- Bibliothèque pour la carte du monde -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
@@ -36,6 +39,8 @@
         <input type="text" id="input-ville" placeholder="Rechercher une ville..." autocomplete="off">
         <button id="btn-rechercher">🔍</button>
         <button id="btn-geoloc" class="btn-geo" title="Me géolocaliser">📍</button>
+        <!-- NOUVEAU BOUTON CARTE -->
+        <button id="btn-map" class="btn-map" title="Ouvrir la carte du monde">🗺️</button>
       </div>
       <div id="suggestions-list" class="suggestions-list"></div>
     </div>
@@ -49,7 +54,10 @@
     <div id="bloc-meteo" class="weather-info" style="display: none;">
 
       <div class="header-city">
-        <div id="ville" class="city-name">Paris</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div id="ville" class="city-name">Paris</div>
+          <div id="date-heure" style="font-size: 0.85em; opacity: 0.9; margin-top: 20px;">--:--</div>
+        </div>
         <button id="btn-toggle-favori" class="btn-fav" title="Favori">⭐</button>
       </div>
 
@@ -97,6 +105,19 @@
       <span id="modal-close" class="modal-close">&times;</span>
       <h3 id="modal-titre">Détails</h3>
       <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+  <!-- Fenêtre modale pour la Carte du Monde -->
+  <div id="modal-map" class="modal" style="display: none;">
+    <div class="modal-content"
+      style="width: 95%; height: 80vh; max-width: 800px; display: flex; flex-direction: column; padding: 16px;">
+      <span id="modal-map-close" class="modal-close" style="z-index: 100;">&times;</span>
+      <h3 style="margin-bottom: 8px;">Carte & Fuseaux Horaires</h3>
+      <div id="map-instructions" class="conseils-box"
+        style="margin-bottom: 12px; font-size: 0.85em; text-align: center;">🌍
+      </div>
+      <!-- Le conteneur de la carte -->
+       <div id="map-container" style="flex: 1; border-radius: 12px; background: #e0e0e0; z-index: 1;"></div>
     </div>
   </div>
 

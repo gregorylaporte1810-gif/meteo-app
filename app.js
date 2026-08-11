@@ -1,5 +1,10 @@
-import { fetchCoordonnees, fetchMeteoComplete } from './api.js';
-import { afficherMeteoActuelle, afficherPrevisions, afficherAlertePluie } from './ui.js';
+import { fetchCoordonnees, fetchMeteoComplete } from "./api.js";
+import {
+  afficherMeteoActuelle,
+  afficherPrevisions,
+  afficherAlertePluie,
+} from "./ui.js";
+import { initialiserCarte } from './map.js';
 
 const inputVille = document.querySelector("#input-ville");
 const btnRechercher = document.querySelector("#btn-rechercher");
@@ -14,7 +19,13 @@ let debounceTimer = null;
 
 // --- GESTION DES FAVORIS ---
 function getFavoris() {
-  return JSON.parse(localStorage.getItem("favoris_meteo")) || ["Paris", "Lyon", "Marseille"];
+  return (
+    JSON.parse(localStorage.getItem("favoris_meteo")) || [
+      "Paris",
+      "Lyon",
+      "Marseille",
+    ]
+  );
 }
 
 function sauvegarderFavoris(favoris) {
@@ -37,15 +48,19 @@ function actualiserBoutonFavori() {
 
 function afficherFavoris() {
   const favoris = getFavoris();
-  favorisBar.innerHTML = favoris.map(v => `
+  favorisBar.innerHTML = favoris
+    .map(
+      (v) => `
     <span class="fav-badge">
       <span class="fav-label">${v}</span>
       <span class="fav-delete" data-ville="${v}" title="Supprimer">×</span>
     </span>
-  `).join('');
-  
+  `,
+    )
+    .join("");
+
   // Clic sur le nom pour charger la météo
-  document.querySelectorAll(".fav-label").forEach(label => {
+  document.querySelectorAll(".fav-label").forEach((label) => {
     label.addEventListener("click", () => {
       inputVille.value = label.textContent;
       chargerMeteoParNom(label.textContent);
@@ -53,11 +68,11 @@ function afficherFavoris() {
   });
 
   // Clic sur la croix pour supprimer le favori
-  document.querySelectorAll(".fav-delete").forEach(delBtn => {
+  document.querySelectorAll(".fav-delete").forEach((delBtn) => {
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const villeASupprimer = delBtn.dataset.ville;
-      const liste = getFavoris().filter(v => v !== villeASupprimer);
+      const liste = getFavoris().filter((v) => v !== villeASupprimer);
       sauvegarderFavoris(liste);
     });
   });
@@ -67,7 +82,7 @@ btnFav.addEventListener("click", () => {
   if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
   const favoris = getFavoris();
   const index = favoris.indexOf(villeActuelleNom);
-  
+
   if (index === -1) {
     favoris.push(villeActuelleNom);
   } else {
@@ -92,12 +107,15 @@ async function chargerMeteoParNom(nom) {
     }
     const ville = results[0];
     villeActuelleNom = ville.name;
-    
+
     // On vide la barre de recherche après validation
-    inputVille.value = ""; 
+    inputVille.value = "";
 
     // Récupération du code postal si présent dans les données Open-Météo
-    const codePostal = (ville.postcodes && ville.postcodes.length > 0) ? ` (${ville.postcodes[0]})` : "";
+    const codePostal =
+      ville.postcodes && ville.postcodes.length > 0
+        ? ` (${ville.postcodes[0]})`
+        : "";
     const nomComplet = `${ville.name}${codePostal}, ${ville.country || ""}`;
 
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
@@ -127,26 +145,29 @@ inputVille.addEventListener("input", () => {
   debounceTimer = setTimeout(async () => {
     try {
       const suggestions = await fetchCoordonnees(requete);
-      
+
       if (!suggestions || suggestions.length === 0) {
         suggestionsList.style.display = "none";
         suggestionsList.innerHTML = "";
         return;
       }
 
-      suggestionsList.innerHTML = suggestions.map(s => {
-        const cp = (s.postcodes && s.postcodes.length > 0) ? ` (${s.postcodes[0]})` : "";
-        return `
+      suggestionsList.innerHTML = suggestions
+        .map((s) => {
+          const cp =
+            s.postcodes && s.postcodes.length > 0 ? ` (${s.postcodes[0]})` : "";
+          return `
           <div class="suggestion-item" data-name="${s.name}">
             ${s.name}${cp}, ${s.country || ""}
           </div>
         `;
-      }).join('');
+        })
+        .join("");
 
       suggestionsList.style.display = "block";
 
       // Gestion du clic sur une suggestion
-      suggestionsList.querySelectorAll(".suggestion-item").forEach(item => {
+      suggestionsList.querySelectorAll(".suggestion-item").forEach((item) => {
         item.addEventListener("click", () => {
           const villeChoisie = item.dataset.name;
           suggestionsList.style.display = "none";
@@ -169,7 +190,9 @@ document.addEventListener("click", (e) => {
 });
 
 // --- ÉVÉNEMENTS GLOBAUX ---
-btnRechercher.addEventListener("click", () => chargerMeteoParNom(inputVille.value));
+btnRechercher.addEventListener("click", () =>
+  chargerMeteoParNom(inputVille.value),
+);
 inputVille.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     suggestionsList.style.display = "none";
@@ -190,15 +213,15 @@ btnGeoloc.addEventListener("click", () => {
   });
 });
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
 const btnFullscreen = document.querySelector("#btn-fullscreen");
 if (btnFullscreen) {
   btnFullscreen.addEventListener("click", () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
+      document.documentElement.requestFullscreen().catch((err) => {
         console.warn(`Erreur plein écran: ${err.message}`);
       });
     } else {
@@ -211,12 +234,15 @@ if (btnFullscreen) {
   // Met à jour l'icône du bouton selon l'état
   document.addEventListener("fullscreenchange", () => {
     btnFullscreen.textContent = document.fullscreenElement ? "🗗" : "⛶";
-    btnFullscreen.title = document.fullscreenElement ? "Quitter le plein écran" : "Plein écran";
+    btnFullscreen.title = document.fullscreenElement
+      ? "Quitter le plein écran"
+      : "Plein écran";
   });
 }
 
 // Lancement initial
 afficherFavoris();
+initialiserCarte();
 const villeInitiale = localStorage.getItem("derniere_ville") || "Paris";
 inputVille.value = villeInitiale;
 chargerMeteoParNom(villeInitiale);
