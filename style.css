@@ -95,6 +95,7 @@ width: 100%;
 
 .search-box input {
   flex: 1;
+  min-width: ;
   padding: 10px 14px;
   border-radius: 12px;
   border: 1px solid #dfe6e9;
@@ -106,7 +107,7 @@ width: 100%;
   background: #2a5298;
   border: none;
   color: white;
-  padding: 10px 14px;
+  padding: 10px 10px;
   border-radius: 12px;
   cursor: pointer;
 }
