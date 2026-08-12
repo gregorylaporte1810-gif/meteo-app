@@ -24,6 +24,11 @@ export function afficherMeteoActuelle(data, nomLieu) {
   // Lancement de l'horloge dynamique avec le fuseau horaire de la ville
   lancerHorloge(data.timezone);
 
+  if (daily && daily.moon_phase && daily.moon_phase[0] !== undefined) {
+    afficherPhaseLunaire(daily.moon_phase[0]);
+  }
+
+
   document.querySelector("#ville").textContent = nomLieu;
   document.querySelector("#temperature").textContent =
     `${Math.round(current.temperature_2m)}°C`;
@@ -218,6 +223,36 @@ function configurerInteractionsModales() {
   modal.ontouchstart = (e) => {
     if (e.target === modal) fermer();
   };
+  document.querySelector("#card-lune").onclick = () => {
+    const d = donneesGlobales.daily;
+    if (!d || !d.moon_phase) return;
+
+    // On génère la liste des phases pour les 7 prochains jours
+    const lignesPrevisions = d.time.map((dateStr, i) => {
+      const jour = new Date(dateStr).toLocaleDateString("fr-FR", { weekday: 'long', day: 'numeric', month: 'short' });
+      const fraction = d.moon_phase[i];
+      const { texte, icone } = obtenirTexteEtConeLune(fraction);
+
+      return `
+        <div class="detail-modal-row" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+          <span>${jour}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2em;">${icone}</span>
+            <strong>${texte}</strong>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const html = `
+      <div class="detail-modal-list">
+        <div style="margin-bottom: 10px; font-size: 0.9em; color: #555;">Suivi du cycle lunaire et phases des prochains jours :</div>
+        ${lignesPrevisions}
+      </div>
+    `;
+    
+    ouvrirModale("Phases Lunaires & Prochaines", html);
+  };
 
   document.querySelector("#hero-meteo").onclick = () => {
     const hourly = donneesGlobales.hourly;
@@ -345,4 +380,44 @@ function lancerHorloge(tz) {
   
   maj(); // Affichage immédiat
   horlogeInterval = setInterval(maj, 1000); // Mise à jour chaque seconde
+}
+
+function afficherPhaseLunaire(valeurFraction) {
+  const iconeElem = document.querySelector("#lune-icone");
+  const texteElem = document.querySelector("#lune-texte");
+  if (!iconeElem || !texteElem) return;
+
+  const res = obtenirTexteEtConeLune(valeurFraction);
+  iconeElem.textContent = res.icone;
+  texteElem.textContent = res.texte;
+
+  // valeurFraction va de 0 à 1 (cycle lunaire)
+  let texte = "Nouvelle lune";
+  let icone = "🌑";
+
+  if (valeurFraction > 0.03 && valeurFraction < 0.22) { texte = "Premier croissant"; icone = "🌒"; }
+  else if (valeurFraction >= 0.22 && valeurFraction <= 0.28) { texte = "Premier quartier"; icone = "🌓"; }
+  else if (valeurFraction > 0.28 && valeurFraction < 0.47) { texte = "Gibbeuse croissante"; icone = "🌔"; }
+  else if (valeurFraction >= 0.47 && valeurFraction <= 0.53) { texte = "Pleine lune"; icone = "🌕"; }
+  else if (valeurFraction > 0.53 && valeurFraction < 0.72) { texte = "Gibbeuse décroissante"; icone = "🌖"; }
+  else if (valeurFraction >= 0.72 && valeurFraction <= 0.78) { texte = "Dernier quartier"; icone = "🌗"; }
+  else if (valeurFraction > 0.78 && valeurFraction < 0.97) { texte = "Dernier croissant"; icone = "🌘"; }
+
+  iconeElem.textContent = icone;
+  texteElem.textContent = texte;
+}
+
+function obtenirTexteEtConeLune(valeurFraction) {
+  let texte = "Nouvelle lune";
+  let icone = "🌑";
+
+  if (valeurFraction > 0.03 && valeurFraction < 0.22) { texte = "Premier croissant"; icone = "🌒"; }
+  else if (valeurFraction >= 0.22 && valeurFraction <= 0.28) { texte = "Premier quartier"; icone = "🌓"; }
+  else if (valeurFraction > 0.28 && valeurFraction < 0.47) { texte = "Gibbeuse croissante"; icone = "🌔"; }
+  else if (valeurFraction >= 0.47 && valeurFraction <= 0.53) { texte = "Pleine lune"; icone = "🌕"; }
+  else if (valeurFraction > 0.53 && valeurFraction < 0.72) { texte = "Gibbeuse décroissante"; icone = "🌖"; }
+  else if (valeurFraction >= 0.72 && valeurFraction <= 0.78) { texte = "Dernier quartier"; icone = "🌗"; }
+  else if (valeurFraction > 0.78 && valeurFraction < 0.97) { texte = "Dernier croissant"; icone = "🌘"; }
+
+  return { texte, icone };
 }

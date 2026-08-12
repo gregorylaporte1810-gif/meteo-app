@@ -19,8 +19,8 @@ export function initialiserCarte() {
       map = L.map('map-container').setView([20, 0], 2);
       
       // 1. FOND DE CARTE COLORÉ (OpenStreetMap standard)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap & CARTO',
         maxZoom: 19
       }).addTo(map);
 
