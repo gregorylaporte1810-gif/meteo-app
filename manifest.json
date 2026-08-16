@@ -1,15 +1,31 @@
 {
-  "name": "Météo Ultra Pro",
+  "name": "Météo Pro & Détaillée",
   "short_name": "Météo",
-  "start_url": "./index.html",
-  "display": "fullscreen",
-  "background_color": "#0f2027",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b131c",
   "theme_color": "#2c3e50",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/869/869869.png",
-      "sizes": "512x512",
+      "src": "./icon.png",
+      "sizes": "192x192",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ma position",
+      "short_name": "GPS",
+      "description": "Lancer directement la météo de votre position",
+      "url": "/?action=geoloc",
+      "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Favoris",
+      "short_name": "Favoris",
+      "description": "Voir la météo des favoris",
+      "url": "/?action=favoris",
+      "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
     }
   ]
 }

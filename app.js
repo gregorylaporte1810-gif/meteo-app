@@ -32,13 +32,12 @@ function setBoutonChargement(actif) {
   }
 }
 
-// --- GESTION DES FAVORIS ---[cite: 25]
 function getFavoris() {
   return (
     JSON.parse(localStorage.getItem("favoris_meteo")) || [
+      "Ichy",
+      "Bois-le-Roi",
       "Paris",
-      "Lyon",
-      "Marseille",
     ]
   );
 }
@@ -69,20 +68,9 @@ function saveWeatherData(data) {
   localStorage.setItem("last_weather_cache", JSON.stringify(cachePayload));
 }
 
-function getCacheAgeMessage() {
-  const cached = localStorage.getItem("last_weather_cache");
-  if (!cached) return "Aucune donnée hors-ligne";
-
-  const { timestamp } = JSON.parse(cached);
-  const minutesAgo = Math.floor((Date.now() - timestamp) / 60000);
-
-  if (minutesAgo < 1) return "Données à l'instant";
-  if (minutesAgo === 1) return "Données mises à jour il y a 1 minute";
-  return `Données mises à jour il y a ${minutesAgo} minutes`;
-}
-
 function afficherFavoris() {
   const favoris = getFavoris();
+  // Ajout d'un bouton de comparateur rapide à la fin de la barre de favoris
   favorisBar.innerHTML = favoris
     .map(
       (v) => `
@@ -92,7 +80,7 @@ function afficherFavoris() {
     </span>
   `,
     )
-    .join("");
+    .join("") + `<span class="fav-badge" id="btn-comparateur" style="background: #3498db; color: white; cursor: pointer;" title="Comparer les favoris">📊 Comparer</span>`;
 
   document.querySelectorAll(".fav-label").forEach((label) => {
     label.addEventListener("click", () => {
@@ -109,20 +97,66 @@ function afficherFavoris() {
       sauvegarderFavoris(liste);
     });
   });
+
+  const btnComp = document.getElementById("btn-comparateur");
+  if (btnComp) {
+    btnComp.onclick =ouvrirComparateurFavoris;
+  }
 }
 
-btnFav.addEventListener("click", () => {
-  if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
+// Fonction du Comparateur Rapide de Favoris
+async function ouvrirComparateurFavoris() {
   const favoris = getFavoris();
-  const index = favoris.indexOf(villeActuelleNom);
+  const modal = document.querySelector("#modal-details");
+  const titre = document.querySelector("#modal-titre");
+  const body = document.querySelector("#modal-body");
 
-  if (index === -1) {
-    favoris.push(villeActuelleNom);
-  } else {
-    favoris.splice(index, 1);
+  titre.textContent = "Comparateur Rapide des Favoris";
+  body.innerHTML = "<p style='text-align:center;'>Chargement des favoris...</p>";
+  modal.style.display = "flex";
+
+  let resultatsHtml = "<div style='display: flex; flex-direction: column; gap: 10px;'>";
+
+  for (const villeNom of favoris) {
+    try {
+      const results = await fetchCoordonnees(villeNom);
+      if (results.length > 0) {
+        const v = results[0];
+        const data = await fetchMeteoComplete(v.latitude, v.longitude);
+        const temp = Math.round(data.current.temperature_2m);
+        const vent = Math.round(data.current.wind_speed_10m);
+        
+        // Utilisation de += pour cumuler toutes les villes
+        resultatsHtml += `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px; color: #2c3e50;">
+            <strong>${v.name}</strong>
+            <span style="font-size: 1.2em;">${temp}°C</span>
+            <span style="font-size: 0.85em; color: #666;">Vent: ${vent} km/h</span>
+          </div>
+        `;
+      }
+    } catch (e) {
+      console.error(`Erreur pour ${villeNom}`, e);
+    }
   }
-  sauvegarderFavoris(favoris);
-});
+  resultatsHtml += "</div>";
+  body.innerHTML = resultatsHtml;
+}
+
+if (btnFav) {
+  btnFav.addEventListener("click", () => {
+    if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
+    const favoris = getFavoris();
+    const index = favoris.indexOf(villeActuelleNom);
+
+    if (index === -1) {
+      favoris.push(villeActuelleNom);
+    } else {
+      favoris.splice(index, 1);
+    }
+    sauvegarderFavoris(favoris);
+  });
+}
 
 async function chargerMeteoParNom(nom) {
   if (!nom.trim()) return;
@@ -142,15 +176,11 @@ async function chargerMeteoParNom(nom) {
     villeActuelleNom = ville.name;
     inputVille.value = "";
 
-    const codePostal =
-      ville.postcodes && ville.postcodes.length > 0
-        ? ` (${ville.postcodes[0]})`
-        : "";
+    const codePostal = ville.postcodes && ville.postcodes.length > 0 ? ` (${ville.postcodes[0]})` : "";
     const nomComplet = `${ville.name}${codePostal}, ${ville.country || ""}`;
 
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
 
-    // Sauvegarde dans le cache local
     saveWeatherData(data);
 
     afficherMeteoActuelle(data, nomComplet);
@@ -167,7 +197,6 @@ async function chargerMeteoParNom(nom) {
   }
 }
 
-// --- AUTOCOMPLÉTION ---[cite: 25]
 inputVille.addEventListener("input", () => {
   indexSuggestion = -1;
   clearTimeout(debounceTimer);
@@ -182,7 +211,6 @@ inputVille.addEventListener("input", () => {
   debounceTimer = setTimeout(async () => {
     try {
       const suggestions = await fetchCoordonnees(requete);
-
       if (!suggestions || suggestions.length === 0) {
         suggestionsList.style.display = "none";
         suggestionsList.innerHTML = "";
@@ -191,13 +219,8 @@ inputVille.addEventListener("input", () => {
 
       suggestionsList.innerHTML = suggestions
         .map((s) => {
-          const cp =
-            s.postcodes && s.postcodes.length > 0 ? ` (${s.postcodes[0]})` : "";
-          return `
-          <div class="suggestion-item" data-name="${s.name}">
-            ${s.name}${cp}, ${s.country || ""}
-          </div>
-        `;
+          const cp = s.postcodes && s.postcodes.length > 0 ? ` (${s.postcodes[0]})` : "";
+          return `<div class="suggestion-item" data-name="${s.name}">${s.name}${cp}, ${s.country || ""}</div>`;
         })
         .join("");
 
@@ -224,13 +247,10 @@ document.addEventListener("click", (e) => {
   }
 });
 
-btnRechercher.addEventListener("click", () =>
-  chargerMeteoParNom(inputVille.value),
-);
+btnRechercher.addEventListener("click", () => chargerMeteoParNom(inputVille.value));
 
 inputVille.addEventListener("keydown", (e) => {
   const items = suggestionsList.querySelectorAll(".suggestion-item");
-
   if (e.key === "ArrowDown") {
     e.preventDefault();
     if (items.length > 0) {
@@ -256,12 +276,11 @@ inputVille.addEventListener("keydown", (e) => {
 
 function mettreAJourSelection(items) {
   items.forEach((item, index) => {
-    item.style.background =
-      index === indexSuggestion ? "#f1f2f6" : "transparent";
+    item.style.background = index === indexSuggestion ? "#f1f2f6" : "transparent";
   });
 }
 
-btnGeoloc.addEventListener("click", () => {
+function lancerGeolocalisation() {
   setBoutonChargement(true);
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
@@ -270,7 +289,6 @@ btnGeoloc.addEventListener("click", () => {
         const nomReel = await fetchNomParCoordonnees(latitude, longitude);
         const data = await fetchMeteoComplete(latitude, longitude);
 
-        // Sauvegarde dans le cache local
         saveWeatherData(data);
 
         villeActuelleNom = nomReel;
@@ -290,7 +308,9 @@ btnGeoloc.addEventListener("click", () => {
       alert("Impossible d'accéder à votre position.");
     },
   );
-});
+}
+
+btnGeoloc.addEventListener("click", lancerGeolocalisation);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
@@ -312,23 +332,29 @@ if (btnFullscreen) {
 
   document.addEventListener("fullscreenchange", () => {
     btnFullscreen.textContent = document.fullscreenElement ? "🗗" : "⛶";
-    btnFullscreen.title = document.fullscreenElement
-      ? "Quitter le plein écran"
-      : "Plein écran";
   });
 }
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    document
-      .querySelectorAll(".modal")
-      .forEach((m) => (m.style.display = "none"));
+    document.querySelectorAll(".modal").forEach((m) => (m.style.display = "none"));
     suggestionsList.style.display = "none";
   }
 });
 
 afficherFavoris();
 initialiserCarte();
-const villeInitiale = localStorage.getItem("derniere_ville") || "Paris";
-inputVille.value = villeInitiale;
-chargerMeteoParNom(villeInitiale);
+
+// Gestion des paramètres d'URL (Raccourcis PWA)
+const urlParams = new URLSearchParams(window.location.search);
+const action = urlParams.get("action");
+
+if (action === "geoloc") {
+  lancerGeolocalisation();
+} else if (action === "favoris") {
+  ouvrirComparateurFavoris();
+} else {
+  const villeInitiale = localStorage.getItem("derniere_ville") || "Ichy";
+  inputVille.value = villeInitiale;
+  chargerMeteoParNom(villeInitiale);
+}

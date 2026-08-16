@@ -423,3 +423,31 @@ body {
   background-color: #ffebee;
   color: #c62828;
 }
+
+.alert-banner {
+  background-color: #ff4757;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.25);
+  transition: all 0.3s ease;
+}
+
+/* Variantes selon le type d'alerte */
+.alert-banner.canicule {
+  background: linear-gradient(135deg, #ff4757, #ff6b81);
+}
+
+.alert-banner.vent {
+  background: linear-gradient(135deg, #ffa502, #ff7f50);
+}
+
+.alert-banner.pluie {
+  background: linear-gradient(135deg, #3742fa, #5352ed);
+}
