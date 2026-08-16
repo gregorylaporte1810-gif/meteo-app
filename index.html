@@ -11,10 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2c3e50">
   <!-- Meta tags spécifiques pour forcer le plein écran sur iOS -->
-  <!-- Pour Android / Chrome -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0f2027">
-  <!-- Pour iPhone / Safari : fusionne la barre avec le fond -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Météo">
@@ -42,9 +39,8 @@
     <div class="search-container">
       <div class="search-box">
         <input type="text" id="input-ville" placeholder="Rechercher une ville..." autocomplete="off">
-        <button id="btn-rechercher">🔍</button>
+        <button id="btn-rechercher" title="Rechercher">🔍</button>
         <button id="btn-geoloc" class="btn-geo" title="Me géolocaliser">📍</button>
-        <!-- NOUVEAU BOUTON CARTE -->
         <button id="btn-map" class="btn-map" title="Ouvrir la carte du monde">🗺️</button>
       </div>
       <div id="suggestions-list" class="suggestions-list"></div>
@@ -58,28 +54,29 @@
     <!-- Bloc météo principal -->
     <div id="bloc-meteo" class="weather-info" style="display: none;">
 
+      <!-- En-tête de la ville avec étoile intégrée harmonieusement -->
       <div class="header-city">
-        <div style="display: flex; flex-direction: column; align-items: center;">
+        <div class="city-header-wrapper">
           <div id="ville" class="city-name">Paris</div>
-          <div id="date-heure" style="font-size: 0.85em; opacity: 0.9; margin-top: 20px;">--:--</div>
+          <button id="btn-toggle-favori" class="btn-fav" title="Favori">⭐</button>
         </div>
-        <button id="btn-toggle-favori" class="btn-fav" title="Favori">⭐</button>
+        <div id="date-heure" style="font-size: 0.8em; opacity: 0.9; margin-top: 2px;">--:--</div>
       </div>
 
       <div id="previsions-7-jours" class="previsions-grid"></div>
 
       <!-- Bloc Lune cliquable -->
       <div class="weather-card clickable" id="card-lune"
-        style="margin-top: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between;"
+        style="margin-top: 8px; padding: 10px; display: flex; align-items: center; justify-content: space-between;"
         title="Voir les détails et prévisions lunaires">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span id="lune-icone" style="font-size: 1.8em;">🌕</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="lune-icone" style="font-size: 1.5em;">🌕</span>
           <div>
-            <div style="font-size: 0.85em; color: #7f8c8d;">Phase lunaire</div>
-            <div id="lune-texte" style="font-weight: bold; font-size: 0.95em;">Pleine lune</div>
+            <div style="font-size: 0.8em; color: #7f8c8d;">Phase lunaire</div>
+            <div id="lune-texte" style="font-weight: bold; font-size: 0.9em;">Pleine lune</div>
           </div>
         </div>
-        <small style="color: #2980b9; font-size: 0.85em;">Détails 👆</small>
+        <small style="color: #2980b9; font-size: 0.8em;">Détails 👆</small>
       </div>
 
       <!-- Bloc central cliquable pour voir le détail horaire -->
@@ -95,7 +92,7 @@
       <!-- Conseils intelligents -->
       <div id="conseils-box" class="conseils-box"></div>
       <div id="stroller-badge" class="badge-stroller"
-        style="margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-weight: bold; display: inline-block;">
+        style="margin-top: 8px; padding: 6px 10px; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 0.85em;">
       </div>
 
       <!-- Grille interactive des détails -->
@@ -129,6 +126,7 @@
       <div id="modal-body" class="modal-body"></div>
     </div>
   </div>
+
   <!-- Fenêtre modale pour la Carte du Monde -->
   <div id="modal-map" class="modal" style="display: none;">
     <div class="modal-content"
@@ -138,7 +136,6 @@
       <div id="map-instructions" class="conseils-box"
         style="margin-bottom: 12px; font-size: 0.85em; text-align: center;">🌍
       </div>
-      <!-- Le conteneur de la carte -->
       <div id="map-container" style="flex: 1; border-radius: 12px; background: #e0e0e0; z-index: 1;"></div>
     </div>
   </div>
