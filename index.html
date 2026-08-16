@@ -21,9 +21,14 @@
   <!-- Bibliothèque pour la carte du monde -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/869/869869.png">
 </head>
 
 <body>
+
+  <div id="weather-widget" role="region" aria-live="polite" aria-label="Prévisions météo actuelles">
+    <!-- Contenu injecté dynamiquement -->
+  </div>
 
   <!-- Canvas pour les animations météo en arrière-plan -->
   <canvas id="weather-canvas"></canvas>
@@ -63,17 +68,19 @@
 
       <div id="previsions-7-jours" class="previsions-grid"></div>
 
-     <!-- Bloc Lune cliquable -->
-    <div class="weather-card clickable" id="card-lune" style="margin-top: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between;" title="Voir les détails et prévisions lunaires">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span id="lune-icone" style="font-size: 1.8em;">🌕</span>
-        <div>
-          <div style="font-size: 0.85em; color: #7f8c8d;">Phase lunaire</div>
-          <div id="lune-texte" style="font-weight: bold; font-size: 0.95em;">Pleine lune</div>
+      <!-- Bloc Lune cliquable -->
+      <div class="weather-card clickable" id="card-lune"
+        style="margin-top: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between;"
+        title="Voir les détails et prévisions lunaires">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="lune-icone" style="font-size: 1.8em;">🌕</span>
+          <div>
+            <div style="font-size: 0.85em; color: #7f8c8d;">Phase lunaire</div>
+            <div id="lune-texte" style="font-weight: bold; font-size: 0.95em;">Pleine lune</div>
+          </div>
         </div>
+        <small style="color: #2980b9; font-size: 0.85em;">Détails 👆</small>
       </div>
-      <small style="color: #2980b9; font-size: 0.85em;">Détails 👆</small>
-    </div>
 
       <!-- Bloc central cliquable pour voir le détail horaire -->
       <div id="hero-meteo" class="hero-meteo" title="Cliquez pour voir les prévisions heure par heure">
@@ -87,6 +94,9 @@
 
       <!-- Conseils intelligents -->
       <div id="conseils-box" class="conseils-box"></div>
+      <div id="stroller-badge" class="badge-stroller"
+        style="margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-weight: bold; display: inline-block;">
+      </div>
 
       <!-- Grille interactive des détails -->
       <div class="details-grid">
@@ -129,7 +139,7 @@
         style="margin-bottom: 12px; font-size: 0.85em; text-align: center;">🌍
       </div>
       <!-- Le conteneur de la carte -->
-       <div id="map-container" style="flex: 1; border-radius: 12px; background: #e0e0e0; z-index: 1;"></div>
+      <div id="map-container" style="flex: 1; border-radius: 12px; background: #e0e0e0; z-index: 1;"></div>
     </div>
   </div>
 

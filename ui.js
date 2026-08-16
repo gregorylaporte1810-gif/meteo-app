@@ -21,13 +21,11 @@ export function afficherMeteoActuelle(data, nomLieu) {
   const current = data.current;
   const daily = data.daily;
 
-  // Lancement de l'horloge dynamique avec le fuseau horaire de la ville
   lancerHorloge(data.timezone);
 
   if (daily && daily.moon_phase && daily.moon_phase[0] !== undefined) {
     afficherPhaseLunaire(daily.moon_phase[0]);
   }
-
 
   document.querySelector("#ville").textContent = nomLieu;
   document.querySelector("#temperature").textContent =
@@ -69,9 +67,16 @@ export function afficherMeteoActuelle(data, nomLieu) {
     uvActuel,
     current.is_day,
   );
-  adapterFond(codeMeteo, current.is_day);
+  
+  const strollerEval = evaluateStrollerWalk(current.temperature_2m, codeMeteo, current.wind_speed_10m);
+  const strollerBadgeElem = document.querySelector("#stroller-badge");
+  if (strollerBadgeElem) {
+      strollerBadgeElem.className = `stroller-badge ${strollerEval.className}`;
+      strollerBadgeElem.textContent = strollerEval.text;
+      strollerBadgeElem.title = strollerEval.description;
+  }
 
-  // Déclenche l'animation météo correspondante
+  adapterFond(codeMeteo, current.is_day);
   setWeatherEffect(codeMeteo);
 
   document.querySelector("#bloc-meteo").style.display = "block";
@@ -227,13 +232,17 @@ function configurerInteractionsModales() {
     const d = donneesGlobales.daily;
     if (!d || !d.moon_phase) return;
 
-    // On génère la liste des phases pour les 7 prochains jours
-    const lignesPrevisions = d.time.map((dateStr, i) => {
-      const jour = new Date(dateStr).toLocaleDateString("fr-FR", { weekday: 'long', day: 'numeric', month: 'short' });
-      const fraction = d.moon_phase[i];
-      const { texte, icone } = obtenirTexteEtConeLune(fraction);
+    const lignesPrevisions = d.time
+      .map((dateStr, i) => {
+        const jour = new Date(dateStr).toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "short",
+        });
+        const fraction = d.moon_phase[i];
+        const { texte, icone } = obtenirTexteEtConeLune(fraction);
 
-      return `
+        return `
         <div class="detail-modal-row" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
           <span>${jour}</span>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -242,7 +251,8 @@ function configurerInteractionsModales() {
           </div>
         </div>
       `;
-    }).join("");
+      })
+      .join("");
 
     const html = `
       <div class="detail-modal-list">
@@ -250,7 +260,7 @@ function configurerInteractionsModales() {
         ${lignesPrevisions}
       </div>
     `;
-    
+
     ouvrirModale("Phases Lunaires & Prochaines", html);
   };
 
@@ -335,51 +345,45 @@ function adapterFond(code, isDay = 1) {
   if (!isDay) {
     fond = "linear-gradient(135deg, #0b131c 0%, #152238 100%)";
   } else if ([95, 96, 99].includes(code)) {
-    // Orage
     fond = "linear-gradient(135deg, #1c1e24 0%, #2f3542 100%)";
   } else if ([71, 73, 75, 77, 85, 86].includes(code)) {
-    // Neige
     fond = "linear-gradient(135deg, #708090 0%, #a4b0be 100%)";
   } else if ([51, 61, 63].includes(code)) {
-    // Pluie
     fond = "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)";
   } else if ([0, 1].includes(code)) {
-    // Soleil
     fond = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
   } else {
-    // Nuageux
     fond = "linear-gradient(135deg, #57606f 0%, #2f3542 100%)";
   }
 
   document.body.style.background = fond;
-  document.documentElement.style.background = fond; // Applique la couleur à tout l'écran iOS
+  document.documentElement.style.background = fond;
 }
 
-// Gère l'affichage en temps réel de l'heure locale de la ville
 function lancerHorloge(tz) {
   if (horlogeInterval) clearInterval(horlogeInterval);
   const affichageDate = document.querySelector("#date-heure");
   if (!tz || !affichageDate) return;
 
   const maj = () => {
-
-    const now = new Date(); 
-    
-    // Options de formatage de la date locale
-    const options = { 
-      timeZone: tz, 
-      weekday: 'long', day: 'numeric', month: 'long', 
-      hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    const now = new Date();
+    const options = {
+      timeZone: tz,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     };
-    // On met la première lettre en majuscule
-    let texteDate = now.toLocaleString('fr-FR', options);
+    let texteDate = now.toLocaleString("fr-FR", options);
     texteDate = texteDate.charAt(0).toUpperCase() + texteDate.slice(1);
-    
+
     affichageDate.textContent = texteDate;
   };
-  
-  maj(); // Affichage immédiat
-  horlogeInterval = setInterval(maj, 1000); // Mise à jour chaque seconde
+
+  maj();
+  horlogeInterval = setInterval(maj, 1000);
 }
 
 function afficherPhaseLunaire(valeurFraction) {
@@ -390,34 +394,60 @@ function afficherPhaseLunaire(valeurFraction) {
   const res = obtenirTexteEtConeLune(valeurFraction);
   iconeElem.textContent = res.icone;
   texteElem.textContent = res.texte;
-
-  // valeurFraction va de 0 à 1 (cycle lunaire)
-  let texte = "Nouvelle lune";
-  let icone = "🌑";
-
-  if (valeurFraction > 0.03 && valeurFraction < 0.22) { texte = "Premier croissant"; icone = "🌒"; }
-  else if (valeurFraction >= 0.22 && valeurFraction <= 0.28) { texte = "Premier quartier"; icone = "🌓"; }
-  else if (valeurFraction > 0.28 && valeurFraction < 0.47) { texte = "Gibbeuse croissante"; icone = "🌔"; }
-  else if (valeurFraction >= 0.47 && valeurFraction <= 0.53) { texte = "Pleine lune"; icone = "🌕"; }
-  else if (valeurFraction > 0.53 && valeurFraction < 0.72) { texte = "Gibbeuse décroissante"; icone = "🌖"; }
-  else if (valeurFraction >= 0.72 && valeurFraction <= 0.78) { texte = "Dernier quartier"; icone = "🌗"; }
-  else if (valeurFraction > 0.78 && valeurFraction < 0.97) { texte = "Dernier croissant"; icone = "🌘"; }
-
-  iconeElem.textContent = icone;
-  texteElem.textContent = texte;
 }
 
 function obtenirTexteEtConeLune(valeurFraction) {
   let texte = "Nouvelle lune";
   let icone = "🌑";
 
-  if (valeurFraction > 0.03 && valeurFraction < 0.22) { texte = "Premier croissant"; icone = "🌒"; }
-  else if (valeurFraction >= 0.22 && valeurFraction <= 0.28) { texte = "Premier quartier"; icone = "🌓"; }
-  else if (valeurFraction > 0.28 && valeurFraction < 0.47) { texte = "Gibbeuse croissante"; icone = "🌔"; }
-  else if (valeurFraction >= 0.47 && valeurFraction <= 0.53) { texte = "Pleine lune"; icone = "🌕"; }
-  else if (valeurFraction > 0.53 && valeurFraction < 0.72) { texte = "Gibbeuse décroissante"; icone = "🌖"; }
-  else if (valeurFraction >= 0.72 && valeurFraction <= 0.78) { texte = "Dernier quartier"; icone = "🌗"; }
-  else if (valeurFraction > 0.78 && valeurFraction < 0.97) { texte = "Dernier croissant"; icone = "🌘"; }
+  if (valeurFraction > 0.03 && valeurFraction < 0.22) {
+    texte = "Premier croissant";
+    icone = "🌒";
+  } else if (valeurFraction >= 0.22 && valeurFraction <= 0.28) {
+    texte = "Premier quartier";
+    icone = "🌓";
+  } else if (valeurFraction > 0.28 && valeurFraction < 0.47) {
+    texte = "Gibbeuse croissante";
+    icone = "🌔";
+  } else if (valeurFraction >= 0.47 && valeurFraction <= 0.53) {
+    texte = "Pleine lune";
+    icone = "🌕";
+  } else if (valeurFraction > 0.53 && valeurFraction < 0.72) {
+    texte = "Gibbeuse décroissante";
+    icone = "🌖";
+  } else if (valeurFraction >= 0.72 && valeurFraction <= 0.78) {
+    texte = "Dernier quartier";
+    icone = "🌗";
+  } else if (valeurFraction > 0.78 && valeurFraction < 0.97) {
+    texte = "Dernier croissant";
+    icone = "🌘";
+  }
 
   return { texte, icone };
+}
+
+export function evaluateStrollerWalk(temp, weatherCode, windSpeed) {
+    const isNoRain = weatherCode < 50;
+    const isGoodTemp = temp >= 12 && temp <= 26;
+    const isLowWind = windSpeed < 20;
+
+    if (isNoRain && isGoodTemp && isLowWind) {
+        return { 
+            text: "Idéal pour la poussette 👶", 
+            className: "badge-ideal",
+            description: "Température agréable, vent faible et pas de pluie."
+        };
+    } else if (isNoRain && windSpeed < 30) {
+        return { 
+            text: "Correct (couvrir un peu) 🌤️", 
+            className: "badge-moderate",
+            description: "Sortie possible, attention au vent sur les chemins."
+        };
+    } else {
+        return { 
+            text: "Conditions non idéales 🌧️", 
+            className: "badge-poor",
+            description: "Risque de pluie ou vent trop fort pour les chemins."
+        };
+    }
 }

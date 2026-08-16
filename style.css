@@ -355,3 +355,41 @@ width: 100%;
   transform: scale(1.05);
   transition: transform 0.3s ease;
 }
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 37%, rgba(255,255,255,0.1) 63%);
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
+    border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.skeleton-text {
+    height: 1.2rem;
+    margin-bottom: 0.5rem;
+    width: 80%;
+}
+
+.skeleton-card {
+    height: 150px;
+    width: 100%;
+}
+
+.badge-ideal {
+  background-color: #e1f5fe;
+  color: #0288d1;
+}
+
+.badge-moderate {
+  background-color: #fff9c4;
+  color: #f57f17;
+}
+
+.badge-poor {
+  background-color: #ffebee;
+  color: #c62828;
+}
