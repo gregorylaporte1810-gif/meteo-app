@@ -23,15 +23,19 @@ export async function fetchMeteoComplete(latitude, longitude) {
   // Récupérer les préférences stockées dans le localStorage
   const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
     uniteTemp: "C",
-    uniteVent: "kmh"
+    uniteVent: "kmh",
   };
 
   // Adapter les valeurs pour l'API Open-Meteo
-  const tempUnit = (prefs.uniteTemp === "F" || prefs.uniteTemp.toLowerCase().includes("fahrenheit")) ? "fahrenheit" : "celsius";
+  const tempUnit =
+    prefs.uniteTemp === "F" ||
+    prefs.uniteTemp.toLowerCase().includes("fahrenheit")
+      ? "fahrenheit"
+      : "celsius";
   const windUnit = prefs.uniteVent; // "kmh", "mph", "ms", "knots"
 
   // URL avec les paramètres dynamiques d'unités
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit=${tempUnit}&windspeed_unit=${windUnit}&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,precipitation_probability,weather_code,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit=${tempUnit}&windspeed_unit=${windUnit}&timezone=auto`;
 
   const response = await fetch(url);
   if (!response.ok) {

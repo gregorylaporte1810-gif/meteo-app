@@ -14,6 +14,7 @@ const codesMeteo = {
 };
 
 let donneesGlobales = null;
+let uvActuelGlobal = 0;
 let horlogeInterval = null;
 
 export function afficherMeteoActuelle(data, nomLieu) {
@@ -22,30 +23,42 @@ export function afficherMeteoActuelle(data, nomLieu) {
   const daily = data.daily;
 
   // 1. Déterminer de façon fiable si c'est le jour ou la nuit selon l'heure locale de la ville
-  const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: data.timezone }));
+  const nowLocal = new Date(
+    new Date().toLocaleString("en-US", { timeZone: data.timezone }),
+  );
   const currentHour = nowLocal.getHours();
-  
+
   let sunriseHour = 6;
   let sunsetHour = 21;
-  if (daily && daily.sunrise && daily.sunset && daily.sunrise[0] && daily.sunset[0]) {
+  if (
+    daily &&
+    daily.sunrise &&
+    daily.sunset &&
+    daily.sunrise[0] &&
+    daily.sunset[0]
+  ) {
     sunriseHour = parseInt(daily.sunrise[0].split("T")[1].split(":")[0], 10);
     sunsetHour = parseInt(daily.sunset[0].split("T")[1].split(":")[0], 10);
   }
-  
+
   // Variable isDay propre (1 = jour, 0 = nuit)
-  const isDay = (currentHour >= sunriseHour && currentHour < sunsetHour) ? 1 : 0;
+  const isDay = currentHour >= sunriseHour && currentHour < sunsetHour ? 1 : 0;
   // On met à jour l'objet data pour qu'il soit propre partout
   current.is_day = isDay;
 
   // Récupérer les préférences d'unités stockées
   const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
     uniteTemp: "C",
-    uniteVent: "kmh"
+    uniteVent: "kmh",
   };
-  
+
   // ... le reste de ta fonction continue ici
 
-  const symboleTemp = (prefs.uniteTemp === "F" || prefs.uniteTemp.toLowerCase().includes("fahrenheit")) ? "°F" : "°C";
+  const symboleTemp =
+    prefs.uniteTemp === "F" ||
+    prefs.uniteTemp.toLowerCase().includes("fahrenheit")
+      ? "°F"
+      : "°C";
   const symboleVent = prefs.uniteVent; // "kmh" ou "mph"
 
   lancerHorloge(data.timezone);
@@ -53,28 +66,62 @@ export function afficherMeteoActuelle(data, nomLieu) {
   // ... (gestion lune, etc.)
 
   document.querySelector("#ville").textContent = nomLieu;
-  
+
   // 2. Utiliser le symbole dynamique pour la température et le vent
-  document.querySelector("#temperature").textContent = `${Math.round(current.temperature_2m)}${symboleTemp}`;
-  document.querySelector("#vent").textContent = `${current.wind_speed_10m} ${symboleVent}`;
-  document.querySelector("#humidite").textContent = `${current.relative_humidity_2m}%`;
+  document.querySelector("#temperature").textContent =
+    `${Math.round(current.temperature_2m)}${symboleTemp}`;
+  document.querySelector("#vent").textContent =
+    `${current.wind_speed_10m} ${symboleVent}`;
+  document.querySelector("#humidite").textContent =
+    `${current.relative_humidity_2m}%`;
 
-
-  const coucher = daily && daily.sunset && daily.sunset[0] ? daily.sunset[0].split("T")[1] : "--:--";
+  const coucher =
+    daily && daily.sunset && daily.sunset[0]
+      ? daily.sunset[0].split("T")[1]
+      : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
 
-  const uvActuel = current.uv_index !== undefined ? Math.round(current.uv_index) : 0;
-  document.querySelector("#indice-uv").textContent = `${uvActuel} / 11`;
+ // Récupérer l'indice UV horaire actuel de façon infaillible via l'heure locale (nowLocal)
+  let uvValeur = 0;
+  if (data.hourly && data.hourly.uv_index && data.hourly.time) {
+    const annee = nowLocal.getFullYear();
+    const mois = String(nowLocal.getMonth() + 1).padStart(2, '0');
+    const jour = String(nowLocal.getDate()).padStart(2, '0');
+    const heure = String(nowLocal.getHours()).padStart(2, '0');
+    const cibleStr = `${annee}-${mois}-${jour}T${heure}`;
 
+    const indexExact = data.hourly.time.findIndex(t => t.startsWith(cibleStr));
+    if (indexExact !== -1) {
+      uvValeur = data.hourly.uv_index[indexExact] ?? 0;
+    } else {
+      // Fallback : recherche par proximité de timestamp local
+      let indexActuel = 0;
+      let ecartMin = Infinity;
+      const tempsLocalMs = nowLocal.getTime();
+      data.hourly.time.forEach((t, index) => {
+        const diff = Math.abs(new Date(t.replace('T', ' ')).getTime() - tempsLocalMs);
+        if (diff < ecartMin) {
+          ecartMin = diff;
+          indexActuel = index;
+        }
+      });
+      uvValeur = data.hourly.uv_index[indexActuel] ?? 0;
+    }
+  }
+
+  const uvActuel = Math.round(uvValeur);
+  uvActuelGlobal = uvActuel;
+  document.querySelector("#indice-uv").textContent = `${uvActuel} / 11`;
   let codeMeteo = current.weather_code;
-  const ilPleutVraiment = current.precipitation > 0 || current.rain > 0 || current.showers > 0;
+  const ilPleutVraiment =
+    current.precipitation > 0 || current.rain > 0 || current.showers > 0;
   if (ilPleutVraiment && [0, 1, 2, 3].includes(codeMeteo)) {
     codeMeteo = 61;
   }
 
   let codeInfo = codesMeteo[codeMeteo] || { texte: "Variable", icone: "🌡️" };
   let iconeAffichee = codeInfo.icone;
-  
+
   // Utilise bien la variable isDay calculée localement
   if (isDay === 0 && [0, 1].includes(codeMeteo)) {
     iconeAffichee = "🌙";
@@ -83,8 +130,14 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#description").textContent = codeInfo.texte;
   document.querySelector("#icone").textContent = iconeAffichee;
 
-  genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, isDay);
-  
+  genererConseilsPratiques(
+    current.temperature_2m,
+    codeMeteo,
+    current.wind_speed_10m,
+    uvActuel,
+    isDay,
+  );
+
   // ...
 
   adapterFond(codeMeteo, isDay);
@@ -93,7 +146,8 @@ export function afficherMeteoActuelle(data, nomLieu) {
   verifierEtAfficherAlertes({
     temperature: current.temperature_2m,
     vent: current.wind_speed_10m,
-    precipitation: current.precipitation || current.rain || current.showers || 0
+    precipitation:
+      current.precipitation || current.rain || current.showers || 0,
   });
 
   document.querySelector("#bloc-meteo").style.display = "block";
@@ -113,7 +167,7 @@ function genererConseilsPratiques(temp, code, vent, uv, isDay) {
 
   document.querySelector("#conseils-box").innerHTML = `
     <div class="conseils-title">Conseils :</div>
-    ${conseils.map(c => `<div>${c}</div>`).join("")}
+    ${conseils.map((c) => `<div>${c}</div>`).join("")}
   `;
 }
 
@@ -124,11 +178,19 @@ export function afficherPrevisions(daily) {
   conteneur.innerHTML = daily.time
     .map((date, index) => {
       if (index === 0) return "";
-      const max = daily.temperature_2m_max[index] !== undefined ? Math.round(daily.temperature_2m_max[index]) : "--";
-      const min = daily.temperature_2m_min[index] !== undefined ? Math.round(daily.temperature_2m_min[index]) : "--";
+      const max =
+        daily.temperature_2m_max[index] !== undefined
+          ? Math.round(daily.temperature_2m_max[index])
+          : "--";
+      const min =
+        daily.temperature_2m_min[index] !== undefined
+          ? Math.round(daily.temperature_2m_min[index])
+          : "--";
       const code = daily.weather_code[index];
       const icone = (codesMeteo[code] || {}).icone || "🌡️";
-      const jour = new Date(date).toLocaleDateString("fr-FR", { weekday: "short" });
+      const jour = new Date(date).toLocaleDateString("fr-FR", {
+        weekday: "short",
+      });
 
       return `
       <div class="prevision-item">
@@ -158,11 +220,15 @@ export function afficherAlertePluie(hourly) {
     }
   });
 
-  const fenetreActuelle = [indexBase, indexBase + 1].filter((idx) => idx < hourly.weather_code.length);
+  const fenetreActuelle = [indexBase, indexBase + 1].filter(
+    (idx) => idx < hourly.weather_code.length,
+  );
   const pluieImminente = fenetreActuelle.some((i) => {
     const code = hourly.weather_code[i];
     const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
-    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    const proba = hourly.precipitation_probability
+      ? hourly.precipitation_probability[i]
+      : 0;
     return codesPluie.includes(code) || precip > 0.05 || proba >= 35;
   });
 
@@ -172,10 +238,16 @@ export function afficherAlertePluie(hourly) {
   }
 
   let indexProchaine = -1;
-  for (let i = indexBase + 2; i < indexBase + 12 && i < hourly.weather_code.length; i++) {
+  for (
+    let i = indexBase + 2;
+    i < indexBase + 12 && i < hourly.weather_code.length;
+    i++
+  ) {
     const code = hourly.weather_code[i];
     const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
-    const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+    const proba = hourly.precipitation_probability
+      ? hourly.precipitation_probability[i]
+      : 0;
 
     if (codesPluie.includes(code) || precip > 0.1 || proba >= 35) {
       indexProchaine = i;
@@ -201,35 +273,53 @@ function configurerInteractionsModales() {
   const modal = document.querySelector("#modal-details");
   const modalClose = document.querySelector("#modal-close");
 
-  const fermer = () => { modal.style.display = "none"; };
+  const fermer = () => {
+    modal.style.display = "none";
+  };
 
   if (modalClose) modalClose.onclick = fermer;
-  if (modal) modal.onclick = (e) => { if (e.target === modal) fermer(); };
+  if (modal)
+    modal.onclick = (e) => {
+      if (e.target === modal) fermer();
+    };
 
   // Carte Lune
   const cardLune = document.querySelector("#card-lune");
   if (cardLune) {
     cardLune.onclick = () => {
       const d = donneesGlobales?.daily;
-      const phaseVal = (d && d.moon_phase && d.moon_phase[0] !== undefined) ? d.moon_phase[0] : 0.12;
+      const phaseVal =
+        d && d.moon_phase && d.moon_phase[0] !== undefined
+          ? d.moon_phase[0]
+          : 0.12;
       const { nomPhase, iconePhase } = obtenirInfosLune(phaseVal);
 
       let htmlProchainesEtapes = "";
       if (d && d.moon_phase && d.time) {
-        const etapes = d.time.slice(0, 7).map((timeStr, idx) => {
-          const pVal = d.moon_phase[idx] !== undefined ? d.moon_phase[idx] : 0;
-          const info = obtenirInfosLune(pVal);
-          const dateObj = new Date(timeStr);
-          const dateLabel = idx === 0 ? "Aujourd'hui" : dateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
-          
-          return `
+        const etapes = d.time
+          .slice(0, 7)
+          .map((timeStr, idx) => {
+            const pVal =
+              d.moon_phase[idx] !== undefined ? d.moon_phase[idx] : 0;
+            const info = obtenirInfosLune(pVal);
+            const dateObj = new Date(timeStr);
+            const dateLabel =
+              idx === 0
+                ? "Aujourd'hui"
+                : dateObj.toLocaleDateString("fr-FR", {
+                    weekday: "short",
+                    day: "numeric",
+                  });
+
+            return `
             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.06); padding: 8px 12px; border-radius: 12px; font-size: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.08);">
               <span style="color: rgba(255, 255, 255, 0.85); min-width: 85px;">${dateLabel}</span>
               <span style="display: flex; align-items: center; gap: 6px; flex: 1;">${info.iconePhase} ${info.nomPhase}</span>
               <strong style="color: #38bdf8;">${Math.round(pVal * 100)}%</strong>
             </div>
           `;
-        }).join("");
+          })
+          .join("");
 
         htmlProchainesEtapes = `
           <div style="border-top: 1px solid rgba(255, 255, 255, 0.15); margin-top: 14px; padding-top: 12px; text-align: left;">
@@ -241,7 +331,9 @@ function configurerInteractionsModales() {
         `;
       }
 
-      ouvrirModale("Détails & Prévisions Lunaires", `
+      ouvrirModale(
+        "Détails & Prévisions Lunaires",
+        `
         <div style="text-align: center; padding: 4px 0;">
           <div style="font-size: 3rem; margin-bottom: 4px;">${iconePhase}</div>
           <h4 style="font-size: 1.1rem; margin-bottom: 4px;">${nomPhase}</h4>
@@ -251,7 +343,8 @@ function configurerInteractionsModales() {
           </p>
           ${htmlProchainesEtapes}
         </div>
-      `);
+      `,
+      );
     };
   }
 
@@ -259,29 +352,51 @@ function configurerInteractionsModales() {
   const heroMeteo = document.querySelector("#hero-meteo");
   if (heroMeteo) {
     heroMeteo.onclick = () => {
-      if (!donneesGlobales || !donneesGlobales.hourly || !donneesGlobales.hourly.time) return;
+      if (
+        !donneesGlobales ||
+        !donneesGlobales.hourly ||
+        !donneesGlobales.hourly.time
+      )
+        return;
 
       const hourly = donneesGlobales.hourly;
       const maintenant = new Date();
-      const startIndex = hourly.time.findIndex((t) => new Date(t) >= maintenant);
+      const startIndex = hourly.time.findIndex(
+        (t) => new Date(t) >= maintenant,
+      );
       const safeStartIndex = startIndex !== -1 ? startIndex : 0;
 
       const cartesHoraires = [];
-      for (let i = safeStartIndex; i < safeStartIndex + 24 && i < hourly.time.length; i++) {
+      for (
+        let i = safeStartIndex;
+        i < safeStartIndex + 24 && i < hourly.time.length;
+        i++
+      ) {
         const dateObj = new Date(hourly.time[i]);
-        const heureStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const heureStr = dateObj.toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
         const code = hourly.weather_code[i];
         const temp = Math.round(hourly.temperature_2m[i]);
-        const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+        const proba = hourly.precipitation_probability
+          ? hourly.precipitation_probability[i]
+          : 0;
 
-        const isDay = hourly.is_day ? hourly.is_day[i] : (dateObj.getHours() >= 7 && dateObj.getHours() < 22 ? 1 : 0);
+        const isDay = hourly.is_day
+          ? hourly.is_day[i]
+          : dateObj.getHours() >= 7 && dateObj.getHours() < 22
+            ? 1
+            : 0;
         let icone = (codesMeteo[code] || {}).icone || "🌡️";
         if (!isDay && [0, 1, 2].includes(code)) {
           icone = code === 2 ? "☁️" : "🌙";
         }
 
         const estPluie = proba >= 25;
-        const badgeBg = estPluie ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.05)";
+        const badgeBg = estPluie
+          ? "rgba(56, 189, 248, 0.2)"
+          : "rgba(255, 255, 255, 0.05)";
         const badgeColor = estPluie ? "#38bdf8" : "rgba(255, 255, 255, 0.5)";
 
         cartesHoraires.push(`
@@ -296,23 +411,61 @@ function configurerInteractionsModales() {
         `);
       }
 
-      ouvrirModale("Évolution des 24 prochaines heures", `
+      ouvrirModale(
+        "Évolution des 24 prochaines heures",
+        `
         <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
           ${cartesHoraires.join("")}
         </div>
-      `);
+      `,
+      );
     };
   }
 
   // Autres cartes interactives
   const interactions = [
-    { id: "#card-vent", titre: "Détails du Vent", content: () => `<div>Vitesse : <strong>${donneesGlobales?.current?.wind_speed_10m} km/h</strong></div><div>Direction : <strong>${donneesGlobales?.current?.wind_direction_10m}°</strong></div>` },
-    { id: "#card-soleil", titre: "Cycle Solaire", content: () => `<div>Lever : <strong>${donneesGlobales?.daily?.sunrise?.[0]?.split("T")[1]}</strong></div><div>Coucher : <strong>${donneesGlobales?.daily?.sunset?.[0]?.split("T")[1]}</strong></div>` },
-    { id: "#card-humidite", titre: "Humidité & Ressenti", content: () => `<div>Humidité : <strong>${donneesGlobales?.current?.relative_humidity_2m}%</strong></div><div>Ressenti : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 0)}°C</strong></div>` },
-    { id: "#card-air", titre: "Qualité de l'Air", content: () => `<div>Indice de qualité de l'air : <strong>Bon (22 AQI)</strong></div>` },
-    { id: "#card-pression", titre: "Pression Atmosphérique", content: () => `<div>Pression au niveau de la mer : <strong>${donneesGlobales?.current?.pressure_msl || 1018} hPa</strong></div>` },
-    { id: "#card-ressenti", titre: "Température Ressentie", content: () => `<div>Température ressentie : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 21)}°C</strong></div>` },
-    { id: "#card-uv", titre: "Indice UV", content: () => `<div>Indice UV actuel : <strong>${donneesGlobales?.current?.uv_index !== undefined ? Math.round(donneesGlobales.current.uv_index) : 3} / 11</strong></div>` }
+    {
+      id: "#card-vent",
+      titre: "Détails du Vent",
+      content: () =>
+        `<div>Vitesse : <strong>${donneesGlobales?.current?.wind_speed_10m} km/h</strong></div><div>Direction : <strong>${donneesGlobales?.current?.wind_direction_10m}°</strong></div>`,
+    },
+    {
+      id: "#card-soleil",
+      titre: "Cycle Solaire",
+      content: () =>
+        `<div>Lever : <strong>${donneesGlobales?.daily?.sunrise?.[0]?.split("T")[1]}</strong></div><div>Coucher : <strong>${donneesGlobales?.daily?.sunset?.[0]?.split("T")[1]}</strong></div>`,
+    },
+    {
+      id: "#card-humidite",
+      titre: "Humidité & Ressenti",
+      content: () =>
+        `<div>Humidité : <strong>${donneesGlobales?.current?.relative_humidity_2m}%</strong></div><div>Ressenti : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 0)}°C</strong></div>`,
+    },
+    {
+      id: "#card-air",
+      titre: "Qualité de l'Air",
+      content: () =>
+        `<div>Indice de qualité de l'air : <strong>Bon (22 AQI)</strong></div>`,
+    },
+    {
+      id: "#card-pression",
+      titre: "Pression Atmosphérique",
+      content: () =>
+        `<div>Pression au niveau de la mer : <strong>${donneesGlobales?.current?.pressure_msl || 1018} hPa</strong></div>`,
+    },
+    {
+      id: "#card-ressenti",
+      titre: "Température Ressentie",
+      content: () =>
+        `<div>Température ressentie : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 21)}°C</strong></div>`,
+    },
+    {
+      id: "#card-uv",
+      titre: "Indice UV",
+      content: () =>
+        `<div>Indice UV actuel : <strong>${uvActuelGlobal} / 11</strong></div>`,
+    },
   ];
 
   interactions.forEach(({ id, titre, content }) => {
@@ -322,20 +475,31 @@ function configurerInteractionsModales() {
 }
 
 function obtenirInfosLune(phaseVal) {
-  if (phaseVal === 0 || phaseVal === 1) return { nomPhase: "Nouvelle lune", iconePhase: "🌑" };
-  if (phaseVal < 0.25) return { nomPhase: "Premier croissant", iconePhase: "🌒" };
-  if (phaseVal === 0.25) return { nomPhase: "Premier quartier", iconePhase: "🌓" };
-  if (phaseVal < 0.5) return { nomPhase: "Gibbeuse croissante", iconePhase: "🌔" };
+  if (phaseVal === 0 || phaseVal === 1)
+    return { nomPhase: "Nouvelle lune", iconePhase: "🌑" };
+  if (phaseVal < 0.25)
+    return { nomPhase: "Premier croissant", iconePhase: "🌒" };
+  if (phaseVal === 0.25)
+    return { nomPhase: "Premier quartier", iconePhase: "🌓" };
+  if (phaseVal < 0.5)
+    return { nomPhase: "Gibbeuse croissante", iconePhase: "🌔" };
   if (phaseVal === 0.5) return { nomPhase: "Pleine lune", iconePhase: "🌕" };
-  if (phaseVal < 0.75) return { nomPhase: "Gibbeuse décroissante", iconePhase: "🌖" };
-  if (phaseVal === 0.75) return { nomPhase: "Dernier quartier", iconePhase: "🌗" };
+  if (phaseVal < 0.75)
+    return { nomPhase: "Gibbeuse décroissante", iconePhase: "🌖" };
+  if (phaseVal === 0.75)
+    return { nomPhase: "Dernier quartier", iconePhase: "🌗" };
   return { nomPhase: "Dernier croissant", iconePhase: "🌘" };
 }
 
 function adapterFond(code, isDay = 1) {
   // 1. Vérifier si un thème clair est actif
-  const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || { theme: "Sombre" };
-  const estThemeClair = prefs.theme === "Clair" || (prefs.theme === "Système" && window.matchMedia("(prefers-color-scheme: light)").matches);
+  const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
+    theme: "Sombre",
+  };
+  const estThemeClair =
+    prefs.theme === "Clair" ||
+    (prefs.theme === "Système" &&
+      window.matchMedia("(prefers-color-scheme: light)").matches);
 
   if (estThemeClair) {
     document.body.style.background = "";
@@ -374,8 +538,17 @@ function lancerHorloge(tz) {
 
   const maj = () => {
     const now = new Date();
-    let texteDate = now.toLocaleString("fr-FR", { timeZone: tz, weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    affichageDate.textContent = texteDate.charAt(0).toUpperCase() + texteDate.slice(1);
+    let texteDate = now.toLocaleString("fr-FR", {
+      timeZone: tz,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    affichageDate.textContent =
+      texteDate.charAt(0).toUpperCase() + texteDate.slice(1);
   };
   maj();
   horlogeInterval = setInterval(maj, 1000);
@@ -392,11 +565,19 @@ function afficherPhaseLunaire(phaseVal) {
 }
 
 export function evaluateStrollerWalk(temp, weatherCode, windSpeed) {
-    if (weatherCode < 50 && temp >= 12 && temp <= 26 && windSpeed < 20) {
-        return { text: "Conditions Poussette : Excellentes. 👶", percent: 90, description: "Conditions idéales pour une promenade." };
-    } else {
-        return { text: "Conditions Poussette : Moyennes. 🌤️", percent: 50, description: "Faites attention au vent ou aux températures." };
-    }
+  if (weatherCode < 50 && temp >= 12 && temp <= 26 && windSpeed < 20) {
+    return {
+      text: "Conditions Poussette : Excellentes. 👶",
+      percent: 90,
+      description: "Conditions idéales pour une promenade.",
+    };
+  } else {
+    return {
+      text: "Conditions Poussette : Moyennes. 🌤️",
+      percent: 50,
+      description: "Faites attention au vent ou aux températures.",
+    };
+  }
 }
 
 function verifierEtAfficherAlertes(meteoActuelle) {
