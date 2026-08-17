@@ -67,13 +67,15 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
   document.querySelector("#ville").textContent = nomLieu;
 
-  // 2. Utiliser le symbole dynamique pour la température et le vent
+  // 2. Utiliser le symbole dynamique pour la température, le vent et le ressentie
   document.querySelector("#temperature").textContent =
     `${Math.round(current.temperature_2m)}${symboleTemp}`;
   document.querySelector("#vent").textContent =
     `${current.wind_speed_10m} ${symboleVent}`;
   document.querySelector("#humidite").textContent =
     `${current.relative_humidity_2m}%`;
+  document.querySelector("#ressenti").textContent =
+    `${Math.round(current.apparent_temperature)}${symboleTemp}`;
 
   const coucher =
     daily && daily.sunset && daily.sunset[0]
@@ -81,16 +83,18 @@ export function afficherMeteoActuelle(data, nomLieu) {
       : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
 
- // Récupérer l'indice UV horaire actuel de façon infaillible via l'heure locale (nowLocal)
+  // Récupérer l'indice UV horaire actuel de façon infaillible via l'heure locale (nowLocal)
   let uvValeur = 0;
   if (data.hourly && data.hourly.uv_index && data.hourly.time) {
     const annee = nowLocal.getFullYear();
-    const mois = String(nowLocal.getMonth() + 1).padStart(2, '0');
-    const jour = String(nowLocal.getDate()).padStart(2, '0');
-    const heure = String(nowLocal.getHours()).padStart(2, '0');
+    const mois = String(nowLocal.getMonth() + 1).padStart(2, "0");
+    const jour = String(nowLocal.getDate()).padStart(2, "0");
+    const heure = String(nowLocal.getHours()).padStart(2, "0");
     const cibleStr = `${annee}-${mois}-${jour}T${heure}`;
 
-    const indexExact = data.hourly.time.findIndex(t => t.startsWith(cibleStr));
+    const indexExact = data.hourly.time.findIndex((t) =>
+      t.startsWith(cibleStr),
+    );
     if (indexExact !== -1) {
       uvValeur = data.hourly.uv_index[indexExact] ?? 0;
     } else {
@@ -99,7 +103,9 @@ export function afficherMeteoActuelle(data, nomLieu) {
       let ecartMin = Infinity;
       const tempsLocalMs = nowLocal.getTime();
       data.hourly.time.forEach((t, index) => {
-        const diff = Math.abs(new Date(t.replace('T', ' ')).getTime() - tempsLocalMs);
+        const diff = Math.abs(
+          new Date(t.replace("T", " ")).getTime() - tempsLocalMs,
+        );
         if (diff < ecartMin) {
           ecartMin = diff;
           indexActuel = index;
