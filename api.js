@@ -19,34 +19,37 @@ export async function fetchCoordonnees(nomVille) {
   return data.results || [];
 }
 
-export async function fetchMeteoComplete(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,is_day&hourly=temperature_2m,weather_code,precipitation,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,moon_phase&timezone=auto`;
-  
-  const reponse = await fetch(url);
-  if (!reponse.ok) throw new Error("Erreur réseau météo");
-  return await reponse.json();
+export async function fetchMeteoComplete(latitude, longitude) {
+  // Récupérer les préférences stockées dans le localStorage
+  const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
+    uniteTemp: "C",
+    uniteVent: "kmh"
+  };
+
+  // Adapter les valeurs pour l'API Open-Meteo
+  const tempUnit = (prefs.uniteTemp === "F" || prefs.uniteTemp.toLowerCase().includes("fahrenheit")) ? "fahrenheit" : "celsius";
+  const windUnit = prefs.uniteVent; // "kmh", "mph", "ms", "knots"
+
+  // URL avec les paramètres dynamiques d'unités
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit=${tempUnit}&windspeed_unit=${windUnit}&timezone=auto`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Erreur réseau lors de la récupération de la météo.");
+  }
+  return await response.json();
 }
 
 export async function fetchNomParCoordonnees(lat, lon) {
   try {
-    // zoom=14 permet de cibler spécifiquement les villages, bourgs et villes
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=fr`;
+    // zoom=3 cible directement l'échelle des pays
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&accept-language=fr`;
     const reponse = await fetchAvecTimeout(url, 5000);
     const data = await reponse.json();
 
     if (data && data.address) {
-      const addr = data.address;
-      // Recherche prioritaire du nom exact de la commune/village
-      return (
-        addr.village ||
-        addr.town ||
-        addr.hamlet ||
-        addr.city ||
-        addr.municipality ||
-        addr.suburb ||
-        addr.county ||
-        "Position actuelle"
-      );
+      // Retourne le nom du pays
+      return data.address.country || "Pays inconnu";
     }
     return "Position actuelle";
   } catch (err) {

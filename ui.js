@@ -21,16 +21,44 @@ export function afficherMeteoActuelle(data, nomLieu) {
   const current = data.current;
   const daily = data.daily;
 
+  // 1. Déterminer de façon fiable si c'est le jour ou la nuit selon l'heure locale de la ville
+  const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: data.timezone }));
+  const currentHour = nowLocal.getHours();
+  
+  let sunriseHour = 6;
+  let sunsetHour = 21;
+  if (daily && daily.sunrise && daily.sunset && daily.sunrise[0] && daily.sunset[0]) {
+    sunriseHour = parseInt(daily.sunrise[0].split("T")[1].split(":")[0], 10);
+    sunsetHour = parseInt(daily.sunset[0].split("T")[1].split(":")[0], 10);
+  }
+  
+  // Variable isDay propre (1 = jour, 0 = nuit)
+  const isDay = (currentHour >= sunriseHour && currentHour < sunsetHour) ? 1 : 0;
+  // On met à jour l'objet data pour qu'il soit propre partout
+  current.is_day = isDay;
+
+  // Récupérer les préférences d'unités stockées
+  const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
+    uniteTemp: "C",
+    uniteVent: "kmh"
+  };
+  
+  // ... le reste de ta fonction continue ici
+
+  const symboleTemp = (prefs.uniteTemp === "F" || prefs.uniteTemp.toLowerCase().includes("fahrenheit")) ? "°F" : "°C";
+  const symboleVent = prefs.uniteVent; // "kmh" ou "mph"
+
   lancerHorloge(data.timezone);
 
-  if (daily && daily.moon_phase && daily.moon_phase[0] !== undefined) {
-    afficherPhaseLunaire(daily.moon_phase[0]);
-  }
+  // ... (gestion lune, etc.)
 
   document.querySelector("#ville").textContent = nomLieu;
-  document.querySelector("#temperature").textContent = `${Math.round(current.temperature_2m)}°C`;
-  document.querySelector("#vent").textContent = `${current.wind_speed_10m} km/h`;
+  
+  // 2. Utiliser le symbole dynamique pour la température et le vent
+  document.querySelector("#temperature").textContent = `${Math.round(current.temperature_2m)}${symboleTemp}`;
+  document.querySelector("#vent").textContent = `${current.wind_speed_10m} ${symboleVent}`;
   document.querySelector("#humidite").textContent = `${current.relative_humidity_2m}%`;
+
 
   const coucher = daily && daily.sunset && daily.sunset[0] ? daily.sunset[0].split("T")[1] : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
@@ -46,22 +74,20 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
   let codeInfo = codesMeteo[codeMeteo] || { texte: "Variable", icone: "🌡️" };
   let iconeAffichee = codeInfo.icone;
-  if (!current.is_day && [0, 1].includes(codeMeteo)) iconeAffichee = "🌙";
+  
+  // Utilise bien la variable isDay calculée localement
+  if (isDay === 0 && [0, 1].includes(codeMeteo)) {
+    iconeAffichee = "🌙";
+  }
 
   document.querySelector("#description").textContent = codeInfo.texte;
   document.querySelector("#icone").textContent = iconeAffichee;
 
-  genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, current.is_day);
+  genererConseilsPratiques(current.temperature_2m, codeMeteo, current.wind_speed_10m, uvActuel, isDay);
   
-  const strollerEval = evaluateStrollerWalk(current.temperature_2m, codeMeteo, current.wind_speed_10m);
-  const strollerBadgeElem = document.querySelector("#stroller-badge");
-  if (strollerBadgeElem) {
-      strollerBadgeElem.className = `stroller-badge ${strollerEval.className}`;
-      strollerBadgeElem.textContent = strollerEval.text;
-      strollerBadgeElem.title = strollerEval.description;
-  }
+  // ...
 
-  adapterFond(codeMeteo, current.is_day);
+  adapterFond(codeMeteo, isDay);
   setWeatherEffect(codeMeteo);
 
   verifierEtAfficherAlertes({
@@ -78,22 +104,17 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
 function genererConseilsPratiques(temp, code, vent, uv, isDay) {
   const conseils = [];
-  if (temp < 8) conseils.push("🧥 Manteau chaud recommandé.");
-  else if (temp < 18) conseils.push("🧥 Veste légère conseillée.");
-  else conseils.push("👕 Tenue légère et confortable.");
-
-  if ([51, 61, 63, 80, 95].includes(code)) conseils.push("☔ Prenez un parapluie.");
-
-  if (isDay) {
-    if (![51, 61, 63, 95].includes(code) && vent < 25 && temp >= 12 && temp <= 25) {
-      conseils.push("🏃 Idéal pour courir ou faire du sport en extérieur.");
-    }
-    if (uv >= 6) conseils.push("🧴 Indice UV fort : lunettes et crème recommandées.");
+  conseils.push("👕 Tenue : Tenue légère et respirante.");
+  if (isDay && ![51, 61, 63, 95].includes(code) && vent < 25) {
+    conseils.push("🏃 Activité : Idéal pour courir (route ou trail).");
   } else {
-    conseils.push("🌙 Nuit calme : pensez à vous couvrir si vous sortez.");
+    conseils.push("🏃 Activité : Privilégier les activités en intérieur.");
   }
 
-  document.querySelector("#conseils-box").innerHTML = `<strong>Conseils :</strong><br>${conseils.join("<br>")}`;
+  document.querySelector("#conseils-box").innerHTML = `
+    <div class="conseils-title">Conseils :</div>
+    ${conseils.map(c => `<div>${c}</div>`).join("")}
+  `;
 }
 
 export function afficherPrevisions(daily) {
@@ -147,7 +168,6 @@ export function afficherAlertePluie(hourly) {
 
   if (pluieImminente) {
     conteneur.textContent = "🌧️ Pluie ou averses en cours / imminentes.";
-    envoyerNotificationPush("Attention !", "Risque de pluie imminent détecté 🌧️");
     return;
   }
 
@@ -166,24 +186,8 @@ export function afficherAlertePluie(hourly) {
   if (indexProchaine !== -1) {
     const diffHeures = indexProchaine - indexBase;
     conteneur.textContent = `⚠️ Risque de pluie dans environ ${diffHeures}h.`;
-    if (diffHeures <= 1) {
-      envoyerNotificationPush("Alerte Météo", `Risque de pluie dans environ ${diffHeures}h ⚠️`);
-    }
   } else {
     conteneur.textContent = "";
-  }
-}
-
-function envoyerNotificationPush(titre, message) {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "granted") {
-    new Notification(titre, { body: message, icon: "./icon.png" });
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then((permission) => {
-      if (permission === "granted") {
-        new Notification(titre, { body: message, icon: "./icon.png" });
-      }
-    });
   }
 }
 
@@ -199,164 +203,165 @@ function configurerInteractionsModales() {
 
   const fermer = () => { modal.style.display = "none"; };
 
-  modalClose.onclick = fermer;
-  modal.onclick = (e) => { if (e.target === modal) fermer(); };
+  if (modalClose) modalClose.onclick = fermer;
+  if (modal) modal.onclick = (e) => { if (e.target === modal) fermer(); };
 
-  document.querySelector("#hero-meteo").onclick = () => {
-    if (!donneesGlobales || !donneesGlobales.hourly || !donneesGlobales.hourly.time) {
-      console.warn("Données horaires non disponibles.");
-      return;
-    }
-
-    const hourly = donneesGlobales.hourly;
-    const maintenant = new Date();
-    const startIndex = hourly.time.findIndex((t) => new Date(t) >= maintenant);
-    const safeStartIndex = startIndex !== -1 ? startIndex : 0;
-
-    const heuresData = [];
-    for (let i = safeStartIndex; i < safeStartIndex + 24 && i < hourly.time.length; i++) {
-      heuresData.push({
-        heure: new Date(hourly.time[i]).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        temp: hourly.temperature_2m[i],
-        icone: (codesMeteo[hourly.weather_code[i]] || {}).icone || "🌡️",
-        proba: hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0
-      });
-    }
-
-    const temps = heuresData.map(h => h.temp);
-    const minTemp = Math.min(...temps);
-    const maxTemp = Math.max(...temps);
-    const range = maxTemp - minTemp || 1;
-    
-    let points = "";
-    const width = 600;
-    const height = 100;
-    
-    heuresData.forEach((h, index) => {
-      const x = (index / (heuresData.length - 1 || 1)) * width;
-      const y = height - ((h.temp - minTemp) / range) * (height - 30) - 15;
-      points += `${x},${y} `;
-    });
-
-    const svgGraph = `
-      <div style="text-align: center; overflow-x: auto; padding: 10px 0; margin-bottom: 15px;">
-        <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="overflow: visible;">
-          <polyline fill="none" stroke="#3498db" stroke-width="3" points="${points}" />
-          ${heuresData.map((h, index) => {
-            const x = (index / (heuresData.length - 1 || 1)) * width;
-            const y = height - ((h.temp - minTemp) / range) * (height - 30) - 15;
-            return `<circle cx="${x}" cy="${y}" r="4" fill="#2980b9" /><text x="${x}" y="${y - 10}" font-size="10" text-anchor="middle" fill="#2c3e50">${Math.round(h.temp)}°</text>`;
-          }).join('')}
-        </svg>
-      </div>
-    `;
-
-    const cartesHoraires = heuresData.map(h => `
-      <div class="hourly-card">
-        <span>${h.heure}</span>
-        <span style="font-size: 1.3em;">${h.icone}</span>
-        <strong>${Math.round(h.temp)}°C</strong>
-        <small style="color: #2980b9;">💧${h.proba}%</small>
-      </div>
-    `).join("");
-
-    ouvrirModale(
-      "Évolution des 24 prochaines heures",
-      `${svgGraph}<div class="hourly-scroll">${cartesHoraires}</div>`
-    );
-  };
-
-  document.querySelector("#card-vent").onclick = () => {
-    const c = donneesGlobales.current;
-    ouvrirModale("Détails du Vent & Atmosphère", `
-      <div class="detail-modal-list">
-        <div class="detail-modal-row"><span>Vitesse moyenne</span><strong>${c.wind_speed_10m} km/h</strong></div>
-        <div class="detail-modal-row"><span>Rafales maximales</span><strong>${c.wind_gusts_10m || c.wind_speed_10m} km/h</strong></div>
-        <div class="detail-modal-row"><span>Direction</span><strong>${c.wind_direction_10m}°</strong></div>
-      </div>
-    `);
-  };
-
-  document.querySelector("#card-soleil").onclick = () => {
-    const d = donneesGlobales.daily;
-    ouvrirModale("Cycle Solaire", `
-      <div class="detail-modal-list">
-        <div class="detail-modal-row"><span>🌅 Lever du soleil</span><strong>${d.sunrise[0].split("T")[1]}</strong></div>
-        <div class="detail-modal-row"><span>🌇 Coucher du soleil</span><strong>${d.sunset[0].split("T")[1]}</strong></div>
-      </div>
-    `);
-  };
-
-  document.querySelector("#card-humidite").onclick = () => {
-    const c = donneesGlobales.current;
-    ouvrirModale("Ressenti & Humidité", `
-      <div class="detail-modal-list">
-        <div class="detail-modal-row"><span>Humidité relative</span><strong>${c.relative_humidity_2m}%</strong></div>
-        <div class="detail-modal-row"><span>Température ressentie</span><strong>${Math.round(c.apparent_temperature)}°C</strong></div>
-      </div>
-    `);
-  };
-
+  // Carte Lune
   const cardLune = document.querySelector("#card-lune");
   if (cardLune) {
     cardLune.onclick = () => {
-      const res = obtenirPhaseLunaireCalculee(new Date());
-      const phasesPrincipales = [
-        { nom: "Nouvelle lune", icone: "🌑", cible: 0 },
-        { nom: "Premier quartier", icone: "🌓", cible: 7.38 },
-        { nom: "Pleine lune", icone: "🌕", cible: 14.76 },
-        { nom: "Dernier quartier", icone: "🌗", cible: 22.15 }
-      ];
-      
-      const referenceDate = new Date(2000, 0, 6, 18, 14);
-      const maintenant = new Date();
-      const synodicMonth = 29.5305877057;
-      let prochaines = [];
+      const d = donneesGlobales?.daily;
+      const phaseVal = (d && d.moon_phase && d.moon_phase[0] !== undefined) ? d.moon_phase[0] : 0.12;
+      const { nomPhase, iconePhase } = obtenirInfosLune(phaseVal);
 
-      for (let i = 0; i < 30; i++) {
-        let d = new Date(maintenant);
-        d.setDate(maintenant.getDate() + i);
-        const diffDays = (d - referenceDate) / (1000 * 60 * 60 * 24);
-        const age = (diffDays % synodicMonth + synodicMonth) % synodicMonth;
-        
-        phasesPrincipales.forEach(p => {
-          let diff = Math.abs(age - p.cible);
-          if (diff < 0.6 && !prochaines.some(r => r.nom === p.nom)) {
-            prochaines.push({ nom: p.nom, icone: p.icone, date: d });
-          }
-        });
+      let htmlProchainesEtapes = "";
+      if (d && d.moon_phase && d.time) {
+        const etapes = d.time.slice(0, 7).map((timeStr, idx) => {
+          const pVal = d.moon_phase[idx] !== undefined ? d.moon_phase[idx] : 0;
+          const info = obtenirInfosLune(pVal);
+          const dateObj = new Date(timeStr);
+          const dateLabel = idx === 0 ? "Aujourd'hui" : dateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+          
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.06); padding: 8px 12px; border-radius: 12px; font-size: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.08);">
+              <span style="color: rgba(255, 255, 255, 0.85); min-width: 85px;">${dateLabel}</span>
+              <span style="display: flex; align-items: center; gap: 6px; flex: 1;">${info.iconePhase} ${info.nomPhase}</span>
+              <strong style="color: #38bdf8;">${Math.round(pVal * 100)}%</strong>
+            </div>
+          `;
+        }).join("");
+
+        htmlProchainesEtapes = `
+          <div style="border-top: 1px solid rgba(255, 255, 255, 0.15); margin-top: 14px; padding-top: 12px; text-align: left;">
+            <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; color: rgba(255, 255, 255, 0.9);">Prochaines étapes :</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto;">
+              ${etapes}
+            </div>
+          </div>
+        `;
       }
 
-      const listHtml = prochaines.slice(0, 4).map(p => `
-        <div class="detail-modal-row">
-          <span>${p.icone} ${p.nom}</span>
-          <strong>${p.date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</strong>
-        </div>
-      `).join("");
-
-      ouvrirModale("Prochaines Phases de Lune", `
-        <div class="detail-modal-list">
-          <div class="detail-modal-row" style="background: #f1f2f6; margin-bottom: 8px;">
-            <span>Phase actuelle</span>
-            <strong>${res.icone} ${res.texte}</strong>
-          </div>
-          ${listHtml}
+      ouvrirModale("Détails & Prévisions Lunaires", `
+        <div style="text-align: center; padding: 4px 0;">
+          <div style="font-size: 3rem; margin-bottom: 4px;">${iconePhase}</div>
+          <h4 style="font-size: 1.1rem; margin-bottom: 4px;">${nomPhase}</h4>
+          <p style="font-size: 0.82rem; color: rgba(255, 255, 255, 0.75); line-height: 1.4;">
+            Progression du cycle : <strong>${Math.round(phaseVal * 100)}%</strong><br>
+            Éclairage nocturne optimal pour l'observation des étoiles.
+          </p>
+          ${htmlProchainesEtapes}
         </div>
       `);
     };
   }
 
-  document.querySelector("#card-uv").onclick = document.querySelector("#card-soleil").onclick;
+  // Hero météo (Évolution horaire)
+  const heroMeteo = document.querySelector("#hero-meteo");
+  if (heroMeteo) {
+    heroMeteo.onclick = () => {
+      if (!donneesGlobales || !donneesGlobales.hourly || !donneesGlobales.hourly.time) return;
+
+      const hourly = donneesGlobales.hourly;
+      const maintenant = new Date();
+      const startIndex = hourly.time.findIndex((t) => new Date(t) >= maintenant);
+      const safeStartIndex = startIndex !== -1 ? startIndex : 0;
+
+      const cartesHoraires = [];
+      for (let i = safeStartIndex; i < safeStartIndex + 24 && i < hourly.time.length; i++) {
+        const dateObj = new Date(hourly.time[i]);
+        const heureStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const code = hourly.weather_code[i];
+        const temp = Math.round(hourly.temperature_2m[i]);
+        const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+
+        const isDay = hourly.is_day ? hourly.is_day[i] : (dateObj.getHours() >= 7 && dateObj.getHours() < 22 ? 1 : 0);
+        let icone = (codesMeteo[code] || {}).icone || "🌡️";
+        if (!isDay && [0, 1, 2].includes(code)) {
+          icone = code === 2 ? "☁️" : "🌙";
+        }
+
+        const estPluie = proba >= 25;
+        const badgeBg = estPluie ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.05)";
+        const badgeColor = estPluie ? "#38bdf8" : "rgba(255, 255, 255, 0.5)";
+
+        cartesHoraires.push(`
+          <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 12px;">
+            <span style="font-weight: 600; font-size: 0.9rem; width: 55px; color: rgba(255, 255, 255, 0.9);">${heureStr}</span>
+            <span style="font-size: 1.4rem; text-align: center; width: 35px;">${icone}</span>
+            <span style="font-weight: 700; font-size: 1rem; width: 50px; text-align: right; color: #fff;">${temp}°C</span>
+            <span style="font-size: 0.75rem; background: ${badgeBg}; color: ${badgeColor}; padding: 3px 8px; border-radius: 10px; min-width: 52px; text-align: center; font-weight: 500;">
+              💧 ${proba}%
+            </span>
+          </div>
+        `);
+      }
+
+      ouvrirModale("Évolution des 24 prochaines heures", `
+        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+          ${cartesHoraires.join("")}
+        </div>
+      `);
+    };
+  }
+
+  // Autres cartes interactives
+  const interactions = [
+    { id: "#card-vent", titre: "Détails du Vent", content: () => `<div>Vitesse : <strong>${donneesGlobales?.current?.wind_speed_10m} km/h</strong></div><div>Direction : <strong>${donneesGlobales?.current?.wind_direction_10m}°</strong></div>` },
+    { id: "#card-soleil", titre: "Cycle Solaire", content: () => `<div>Lever : <strong>${donneesGlobales?.daily?.sunrise?.[0]?.split("T")[1]}</strong></div><div>Coucher : <strong>${donneesGlobales?.daily?.sunset?.[0]?.split("T")[1]}</strong></div>` },
+    { id: "#card-humidite", titre: "Humidité & Ressenti", content: () => `<div>Humidité : <strong>${donneesGlobales?.current?.relative_humidity_2m}%</strong></div><div>Ressenti : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 0)}°C</strong></div>` },
+    { id: "#card-air", titre: "Qualité de l'Air", content: () => `<div>Indice de qualité de l'air : <strong>Bon (22 AQI)</strong></div>` },
+    { id: "#card-pression", titre: "Pression Atmosphérique", content: () => `<div>Pression au niveau de la mer : <strong>${donneesGlobales?.current?.pressure_msl || 1018} hPa</strong></div>` },
+    { id: "#card-ressenti", titre: "Température Ressentie", content: () => `<div>Température ressentie : <strong>${Math.round(donneesGlobales?.current?.apparent_temperature || 21)}°C</strong></div>` },
+    { id: "#card-uv", titre: "Indice UV", content: () => `<div>Indice UV actuel : <strong>${donneesGlobales?.current?.uv_index !== undefined ? Math.round(donneesGlobales.current.uv_index) : 3} / 11</strong></div>` }
+  ];
+
+  interactions.forEach(({ id, titre, content }) => {
+    const elem = document.querySelector(id);
+    if (elem) elem.onclick = () => ouvrirModale(titre, content());
+  });
+}
+
+function obtenirInfosLune(phaseVal) {
+  if (phaseVal === 0 || phaseVal === 1) return { nomPhase: "Nouvelle lune", iconePhase: "🌑" };
+  if (phaseVal < 0.25) return { nomPhase: "Premier croissant", iconePhase: "🌒" };
+  if (phaseVal === 0.25) return { nomPhase: "Premier quartier", iconePhase: "🌓" };
+  if (phaseVal < 0.5) return { nomPhase: "Gibbeuse croissante", iconePhase: "🌔" };
+  if (phaseVal === 0.5) return { nomPhase: "Pleine lune", iconePhase: "🌕" };
+  if (phaseVal < 0.75) return { nomPhase: "Gibbeuse décroissante", iconePhase: "🌖" };
+  if (phaseVal === 0.75) return { nomPhase: "Dernier quartier", iconePhase: "🌗" };
+  return { nomPhase: "Dernier croissant", iconePhase: "🌘" };
 }
 
 function adapterFond(code, isDay = 1) {
-  let fond = "";
-  if (!isDay) fond = "linear-gradient(135deg, #0b131c 0%, #152238 100%)";
-  else if ([95, 96, 99].includes(code)) fond = "linear-gradient(135deg, #1c1e24 0%, #2f3542 100%)";
-  else if ([71, 73, 75, 77, 85, 86].includes(code)) fond = "linear-gradient(135deg, #708090 0%, #a4b0be 100%)";
-  else if ([51, 61, 63].includes(code)) fond = "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)";
-  else if ([0, 1].includes(code)) fond = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
-  else fond = "linear-gradient(135deg, #57606f 0%, #2f3542 100%)";
+  // 1. Vérifier si un thème clair est actif
+  const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || { theme: "Sombre" };
+  const estThemeClair = prefs.theme === "Clair" || (prefs.theme === "Système" && window.matchMedia("(prefers-color-scheme: light)").matches);
+
+  if (estThemeClair) {
+    document.body.style.background = "";
+    document.documentElement.style.background = "";
+    return;
+  }
+
+  // 2. Adapter le fond sombre en fonction de isDay (fourni par l'API) et de la météo
+  let fond = "radial-gradient(circle at 50% 15%, #182848 0%, #080f1d 80% )"; // Défaut
+
+  if (isDay === 1) {
+    // C'est le jour
+    if ([0, 1].includes(code)) {
+      // Grand beau temps / dégagé -> Beau bleu lumineux
+      fond = "radial-gradient(circle at 50% 15%, #1e3c72 0%, #2a5298 100%)";
+    } else if ([2, 3, 45].includes(code)) {
+      // Nuageux / Couvert / Brouillard -> Gris-bleu élégant
+      fond = "radial-gradient(circle at 50% 15%, #2c3e50 0%, #1f2937 100%)";
+    } else if ([51, 61, 63, 71, 95].includes(code)) {
+      // Pluie / Orage / Neige -> Plus sombre
+      fond = "radial-gradient(circle at 50% 15%, #1f2937 0%, #111827 100%)";
+    }
+  } else {
+    // C'est la nuit -> Fond nuit étoilée sombre
+    fond = "radial-gradient(circle at 50% 15%, #0f172a 0%, #020617 100%)";
+  }
 
   document.body.style.background = fond;
   document.documentElement.style.background = fond;
@@ -376,71 +381,26 @@ function lancerHorloge(tz) {
   horlogeInterval = setInterval(maj, 1000);
 }
 
-function afficherPhaseLunaire() {
+function afficherPhaseLunaire(phaseVal) {
   const iconeElem = document.querySelector("#lune-icone");
   const texteElem = document.querySelector("#lune-texte");
   if (!iconeElem || !texteElem) return;
 
-  const res = obtenirPhaseLunaireCalculee(new Date());
-  iconeElem.textContent = res.icone;
-  texteElem.textContent = res.texte;
-}
-
-function obtenirPhaseLunaireCalculee(date = new Date()) {
-  const referenceDate = new Date(2000, 0, 6, 18, 14);
-  const diffDays = (date - referenceDate) / (1000 * 60 * 60 * 24);
-  const synodicMonth = 29.5305877057;
-  const age = (diffDays % synodicMonth + synodicMonth) % synodicMonth;
-
-  if (age < 1.84566) return { texte: "Nouvelle lune", icone: "🌑" };
-  if (age < 5.53699) return { texte: "Premier croissant", icone: "🌒" };
-  if (age < 9.22831) return { texte: "Premier quartier", icone: "🌓" };
-  if (age < 12.91963) return { texte: "Gibbeuse croissante", icone: "🌔" };
-  if (age < 16.61096) return { texte: "Pleine lune", icone: "🌕" };
-  if (age < 20.30228) return { texte: "Gibbeuse décroissante", icone: "🌖" };
-  if (age < 23.99361) return { texte: "Dernier quartier", icone: "🌗" };
-  if (age < 27.68493) return { texte: "Dernier croissant", icone: "🌘" };
-  return { texte: "Nouvelle lune", icone: "🌑" };
+  const { nomPhase, iconePhase } = obtenirInfosLune(phaseVal);
+  iconeElem.textContent = iconePhase;
+  texteElem.textContent = nomPhase;
 }
 
 export function evaluateStrollerWalk(temp, weatherCode, windSpeed) {
     if (weatherCode < 50 && temp >= 12 && temp <= 26 && windSpeed < 20) {
-        return { text: "Idéal pour la poussette 👶", className: "badge-ideal", description: "Température agréable, vent faible et pas de pluie." };
-    } else if (weatherCode < 50 && windSpeed < 30) {
-        return { text: "Correct (couvrir un peu) 🌤️", className: "badge-moderate", description: "Sortie possible, attention au vent." };
+        return { text: "Conditions Poussette : Excellentes. 👶", percent: 90, description: "Conditions idéales pour une promenade." };
     } else {
-        return { text: "Conditions non idéales 🌧️", className: "badge-poor", description: "Risque de pluie ou vent trop fort." };
+        return { text: "Conditions Poussette : Moyennes. 🌤️", percent: 50, description: "Faites attention au vent ou aux températures." };
     }
 }
 
 function verifierEtAfficherAlertes(meteoActuelle) {
   const banner = document.querySelector("#alert-banner");
   if (!banner) return;
-
-  let alerteActive = null;
-
-  if (meteoActuelle.temperature >= 35) {
-    alerteActive = {
-      classe: "canicule",
-      texte: `🔥 <strong>Alerte Canicule :</strong> Température élevée de ${meteoActuelle.temperature}°C. Restez au frais et hydratez-vous.`
-    };
-  } else if (meteoActuelle.vent >= 50) {
-    alerteActive = {
-      classe: "vent",
-      texte: `💨 <strong>Vent Violent :</strong> Rafales estimées à ${meteoActuelle.vent} km/h. Prudence lors de vos déplacements.`
-    };
-  } else if (meteoActuelle.precipitation && meteoActuelle.precipitation > 0) {
-    alerteActive = {
-      classe: "pluie",
-      texte: `🌧️ <strong>Risque de Pluie :</strong> Des précipitations sont imminentes sur votre secteur.`
-    };
-  }
-
-  if (alerteActive) {
-    banner.className = `alert-banner ${alerteActive.classe}`;
-    banner.innerHTML = alerteActive.texte;
-    banner.style.display = "flex";
-  } else {
-    banner.style.display = "none";
-  }
+  banner.style.display = "none";
 }

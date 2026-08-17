@@ -3,7 +3,11 @@ import { fetchMeteoComplete, fetchNomParCoordonnees } from './api.js';
 let map = null;
 let point1 = null;
 let point2 = null;
-let modeComparaison = false; // Permet de savoir si on a cliqué sur le bouton "Comparer"
+let modeComparaison = false;
+
+// Variables pour conserver les marqueurs Leaflet
+let marker1 = null;
+let marker2 = null;
 
 export function initialiserCarte() {
   const btnMap = document.querySelector("#btn-map");
@@ -18,7 +22,7 @@ export function initialiserCarte() {
     if (!map) {
       map = L.map('map-container').setView([20, 0], 2);
       
-      // 1. FOND DE CARTE COLORÉ (OpenStreetMap standard)
+      // 1. FOND DE CARTE COLORÉ
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap & CARTO',
         maxZoom: 19
@@ -40,16 +44,42 @@ export function initialiserCarte() {
           if ([71,73,75,77,85,86].includes(code)) meteoTexte = "Neige ❄️";
           if ([95,96,99].includes(code)) meteoTexte = "Orage ⛈️";
 
-          // 2. GESTION DE L'OPTION DE COMPARAISON
           if (!modeComparaison) {
-            // Mode normal : chaque clic affiche juste le lieu cliqué
-            point1 = { nom, tz, meteoTexte, temp: Math.round(meteo.current.temperature_2m) };
+            // Mode normal : affichage du point cliqué
+            point1 = { nom, tz, meteoTexte, temp: Math.round(meteo.current.temperature_2m), lat, lng };
+
+            // Supprimer le second marqueur s'il existait
+            if (marker2) { map.removeLayer(marker2); marker2 = null; }
+
+            // Créer ou déplacer le premier marqueur
+            if (marker1) {
+              marker1.setLatLng([lat, lng]);
+            } else {
+              marker1 = L.marker([lat, lng]).addTo(map);
+            }
+            marker1.bindPopup(`<b>📍 ${nom}</b>`).openPopup();
+
+            // Recentrer et zoomer sur le point
+            map.setView([lat, lng], 5);
+
             afficherUnPoint(point1, instructions);
           } else {
-            // Si on a cliqué sur le bouton "Comparer", le clic suivant active la comparaison
-            point2 = { nom, tz, meteoTexte, temp: Math.round(meteo.current.temperature_2m) };
+            // Mode comparaison : affichage du 2ème lieu
+            point2 = { nom, tz, meteoTexte, temp: Math.round(meteo.current.temperature_2m), lat, lng };
+
+            if (marker2) {
+              marker2.setLatLng([lat, lng]);
+            } else {
+              marker2 = L.marker([lat, lng]).addTo(map);
+            }
+            marker2.bindPopup(`<b>2️⃣ ${nom}</b>`).openPopup();
+
+            // Ajuster la vue pour afficher les 2 marqueurs simultanément
+            const bounds = L.latLngBounds([[point1.lat, point1.lng], [lat, lng]]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+
             afficherComparaison(point1, point2, instructions);
-            modeComparaison = false; // On désactive le mode pour le prochain clic
+            modeComparaison = false;
           }
         } catch (err) {
           instructions.innerHTML = "❌ Impossible de lire les données ici.";
@@ -57,15 +87,18 @@ export function initialiserCarte() {
       });
     }
     
-    // Répare un bug d'affichage de Leaflet dans les modales
+    // Répare le bug de rendu Leaflet à l'ouverture de la modale
     setTimeout(() => map.invalidateSize(), 300);
   });
 
   btnClose.addEventListener("click", () => {
     modalMap.style.display = "none";
-    // On réinitialise l'état quand on ferme la fenêtre
     modeComparaison = false;
     instructions.innerHTML = "🌍 Cliquez sur un pays pour voir sa météo.";
+
+    // Retirer les marqueurs à la fermeture
+    if (marker1) { map.removeLayer(marker1); marker1 = null; }
+    if (marker2) { map.removeLayer(marker2); marker2 = null; }
   });
 }
 
@@ -79,7 +112,6 @@ function afficherUnPoint(p, conteneur) {
     </button>
   `;
 
-  // On écoute le clic sur le nouveau bouton
   document.querySelector("#btn-activer-comparaison").addEventListener("click", () => {
     modeComparaison = true;
     conteneur.innerHTML = `
