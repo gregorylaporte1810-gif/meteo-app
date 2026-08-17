@@ -1,7 +1,7 @@
 {
   "name": "Météo Pro & Détaillée",
   "short_name": "Météo",
-  "start_url": "/",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b131c",
   "theme_color": "#2c3e50",
