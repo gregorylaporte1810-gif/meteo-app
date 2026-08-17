@@ -18,6 +18,10 @@ html, body {
   color: #ffffff;
   overflow: hidden;
   position: relative;
+  body {
+  /* Ajoute ou adapte cette ligne pour respecter l'encoche de l'iPhone */
+  padding-top: env(safe-area-inset-top);
+}
 }
 
 /* Canvas pour les animations météo */
@@ -76,6 +80,7 @@ html, body {
   flex-direction: column;
   gap: 10px;
   z-index: 10;
+  padding-top: max(15px, env(safe-area-inset-top));
 }
 
 .weather-card::-webkit-scrollbar { width: 4px; }
