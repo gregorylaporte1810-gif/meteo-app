@@ -586,15 +586,18 @@ export function afficherFriseHoraire(hourly, timezone) {
     }
 
     cartesHoraires.push(`
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; text-align: center;">
         <span style="font-size: 0.8rem; opacity: 0.8;">${heureStr}</span>
-        <span style="font-size: 1.2rem;">${icone}</span>
+        <span style="font-size: 1.2rem; margin: 2px 0;">${icone}</span>
         <strong style="font-size: 0.95rem;">${temp}°</strong>
       </div>
     `);
   }
 
-  if (conteneur && conteneur.classList) {
+  if (conteneur) {
+    conteneur.style.display = "flex";
+    conteneur.style.justifyContent = "space-between";
+    conteneur.style.alignItems = "center";
     conteneur.innerHTML = cartesHoraires.join("");
   }
 }
