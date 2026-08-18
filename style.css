@@ -616,8 +616,29 @@ body.theme-clair .btn-fullscreen {
   color: #0f172a !important;
 }
 
+
 body.theme-clair .stroller-banner {
   background: rgba(14, 165, 233, 0.1) !important;
   border: 1px solid rgba(14, 165, 233, 0.25) !important;
   color: #0369a1 !important;
 }
+/* Conteneur principal de la frise horaire */
+.hourly-scroll-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+
+/* Chaque élément horaire individuel */
+.hourly-scroll-container > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  text-align: center;
+}
+
+
