@@ -22,7 +22,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
   const current = data.current;
   const daily = data.daily;
 
-  // 1. Déterminer de façon fiable si c'est le jour ou la nuit selon l'heure locale de la ville
   const nowLocal = new Date(
     new Date().toLocaleString("en-US", { timeZone: data.timezone }),
   );
@@ -41,33 +40,25 @@ export function afficherMeteoActuelle(data, nomLieu) {
     sunsetHour = parseInt(daily.sunset[0].split("T")[1].split(":")[0], 10);
   }
 
-  // Variable isDay propre (1 = jour, 0 = nuit)
   const isDay = currentHour >= sunriseHour && currentHour < sunsetHour ? 1 : 0;
-  // On met à jour l'objet data pour qu'il soit propre partout
   current.is_day = isDay;
 
-  // Récupérer les préférences d'unités stockées
   const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
     uniteTemp: "C",
     uniteVent: "kmh",
   };
-
-  // ... le reste de ta fonction continue ici
 
   const symboleTemp =
     prefs.uniteTemp === "F" ||
     prefs.uniteTemp.toLowerCase().includes("fahrenheit")
       ? "°F"
       : "°C";
-  const symboleVent = prefs.uniteVent; // "kmh" ou "mph"
+  const symboleVent = prefs.uniteVent;
 
   lancerHorloge(data.timezone);
 
-  // ... (gestion lune, etc.)
-
   document.querySelector("#ville").textContent = nomLieu;
 
-  // 2. Utiliser le symbole dynamique pour la température, le vent et le ressentie
   document.querySelector("#temperature").textContent =
     `${Math.round(current.temperature_2m)}${symboleTemp}`;
   document.querySelector("#vent").textContent =
@@ -83,7 +74,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
       : "--:--";
   document.querySelector("#soleil-apercu").textContent = coucher;
 
-  // Récupérer l'indice UV horaire actuel de façon infaillible via l'heure locale (nowLocal)
   let uvValeur = 0;
   if (data.hourly && data.hourly.uv_index && data.hourly.time) {
     const annee = nowLocal.getFullYear();
@@ -98,7 +88,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
     if (indexExact !== -1) {
       uvValeur = data.hourly.uv_index[indexExact] ?? 0;
     } else {
-      // Fallback : recherche par proximité de timestamp local
       let indexActuel = 0;
       let ecartMin = Infinity;
       const tempsLocalMs = nowLocal.getTime();
@@ -128,7 +117,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
   let codeInfo = codesMeteo[codeMeteo] || { texte: "Variable", icone: "🌡️" };
   let iconeAffichee = codeInfo.icone;
 
-  // Utilise bien la variable isDay calculée localement
   if (isDay === 0 && [0, 1].includes(codeMeteo)) {
     iconeAffichee = "🌙";
   }
@@ -144,8 +132,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
     isDay,
   );
 
-  // ...
-
   adapterFond(codeMeteo, isDay);
   setWeatherEffect(codeMeteo);
 
@@ -159,23 +145,9 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#bloc-meteo").style.display = "block";
   document.querySelector("#message-statut").style.display = "none";
 
-    // ... (fin de la fonction afficherMeteoActuelle)
-  verifierEtAfficherAlertes({
-    temperature: current.temperature_2m,
-    vent: current.wind_speed_10m,
-    precipitation: current.precipitation || current.rain || current.showers || 0,
-  });
-
-  document.querySelector("#bloc-meteo").style.display = "block";
-  document.querySelector("#message-statut").style.display = "none";
-
-  // APPEL DE LA FRISE HORIZONTALE ICI :
   afficherFriseHoraire(data.hourly, data.timezone);
-
   configurerInteractionsModales();
 }
-
-  
 
 function genererConseilsPratiques(temp, code, vent, uv, isDay) {
   const conseils = [];
@@ -378,7 +350,6 @@ function configurerInteractionsModales() {
       const hourly = donneesGlobales.hourly;
       const timezone = donneesGlobales.timezone;
 
-      // Création de l'heure cible synchronisée sur le fuseau de la ville
       const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
       const annee = nowLocal.getFullYear();
       const mois = String(nowLocal.getMonth() + 1).padStart(2, "0");
@@ -428,8 +399,6 @@ function configurerInteractionsModales() {
       `
       );
     };
-  }
-
   }
 
   // Autres cartes interactives
@@ -502,7 +471,6 @@ function obtenirInfosLune(phaseVal) {
 }
 
 function adapterFond(code, isDay = 1) {
-  // 1. Vérifier si un thème clair est actif
   const prefs = JSON.parse(localStorage.getItem("meteo_preferences")) || {
     theme: "Sombre",
   };
@@ -517,23 +485,17 @@ function adapterFond(code, isDay = 1) {
     return;
   }
 
-  // 2. Adapter le fond sombre en fonction de isDay (fourni par l'API) et de la météo
-  let fond = "radial-gradient(circle at 50% 15%, #182848 0%, #080f1d 80% )"; // Défaut
+  let fond = "radial-gradient(circle at 50% 15%, #182848 0%, #080f1d 80% )";
 
   if (isDay === 1) {
-    // C'est le jour
     if ([0, 1].includes(code)) {
-      // Grand beau temps / dégagé -> Beau bleu lumineux
       fond = "radial-gradient(circle at 50% 15%, #1e3c72 0%, #2a5298 100%)";
     } else if ([2, 3, 45].includes(code)) {
-      // Nuageux / Couvert / Brouillard -> Gris-bleu élégant
       fond = "radial-gradient(circle at 50% 15%, #2c3e50 0%, #1f2937 100%)";
     } else if ([51, 61, 63, 71, 95].includes(code)) {
-      // Pluie / Orage / Neige -> Plus sombre
       fond = "radial-gradient(circle at 50% 15%, #1f2937 0%, #111827 100%)";
     }
   } else {
-    // C'est la nuit -> Fond nuit étoilée sombre
     fond = "radial-gradient(circle at 50% 15%, #0f172a 0%, #020617 100%)";
   }
 
@@ -590,14 +552,13 @@ export function evaluateStrollerWalk(temp, weatherCode, windSpeed) {
   }
 }
 
-function verifierEtAfficherAlertes(meteoActuelle) {ça
+function verifierEtAfficherAlertes(meteoActuelle) {
   const banner = document.querySelector("#alert-banner");
   if (!banner) return;
   banner.style.display = "none";
 }
 
 export function afficherFriseHoraire(hourly, timezone) {
-  // On cible directement le conteneur parent de la frise sur ta capture
   const conteneur = document.querySelector(".hourly-scroll-container") || document.querySelector("#hero-meteo")?.nextElementSibling;
   if (!hourly || !hourly.time) return;
 
@@ -633,7 +594,6 @@ export function afficherFriseHoraire(hourly, timezone) {
     `);
   }
 
-  // Si un conteneur dédié existe, on l'injecte, sinon on évite de casser le DOM
   if (conteneur && conteneur.classList) {
     conteneur.innerHTML = cartesHoraires.join("");
   }
