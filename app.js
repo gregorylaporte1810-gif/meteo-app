@@ -480,7 +480,9 @@ if (action === "geoloc" || prefs.geolocAuto) {
 } else if (action === "favoris") {
   ouvrirComparateurFavoris();
 } else {
-  const villeInitiale = prefs.villeDefaut || localStorage.getItem("derniere_ville") || "Ichy";
-  inputVille.value = villeInitiale;
-  chargerMeteoParNom(villeInitiale);
+  // --- INITIALISATION DE L'APPLICATION ---
+const villeInitiale = localStorage.getItem("derniere_ville") || prefs.villeDefaut || "Ichy";
+inputVille.value = villeInitiale;
+chargerMeteoParNom(villeInitiale);
+
 }
