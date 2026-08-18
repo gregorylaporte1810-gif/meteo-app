@@ -493,8 +493,7 @@ function lancerHorloge(tz) {
       day: "numeric",
       month: "long",
       hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+      minute: "2-digit"
     });
     affichageDate.textContent =
       texteDate.charAt(0).toUpperCase() + texteDate.slice(1);
