@@ -23,7 +23,7 @@ export function afficherMeteoActuelle(data, nomLieu) {
   const daily = data.daily;
 
   const nowLocal = new Date(
-    new Date().toLocaleString("en-US", { timeZone: data.timezone }),
+    new Date().toLocaleString("en-US", { timeZone: data.timezone })
   );
   const currentHour = nowLocal.getHours();
 
@@ -83,7 +83,7 @@ export function afficherMeteoActuelle(data, nomLieu) {
     const cibleStr = `${annee}-${mois}-${jour}T${heure}`;
 
     const indexExact = data.hourly.time.findIndex((t) =>
-      t.startsWith(cibleStr),
+      t.startsWith(cibleStr)
     );
     if (indexExact !== -1) {
       uvValeur = data.hourly.uv_index[indexExact] ?? 0;
@@ -93,7 +93,7 @@ export function afficherMeteoActuelle(data, nomLieu) {
       const tempsLocalMs = nowLocal.getTime();
       data.hourly.time.forEach((t, index) => {
         const diff = Math.abs(
-          new Date(t.replace("T", " ")).getTime() - tempsLocalMs,
+          new Date(t.replace("T", " ")).getTime() - tempsLocalMs
         );
         if (diff < ecartMin) {
           ecartMin = diff;
@@ -191,7 +191,7 @@ export function afficherAlertePluie(hourly) {
   });
 
   const fenetreActuelle = [indexBase, indexBase + 1].filter(
-    (idx) => idx < hourly.weather_code.length,
+    (idx) => idx < hourly.weather_code.length
   );
   const pluieImminente = fenetreActuelle.some((i) => {
     const code = hourly.weather_code[i];
@@ -282,9 +282,9 @@ function configurerInteractionsModales() {
                   });
 
             return `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.06); padding: 8px 12px; border-radius: 12px; font-size: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.06); padding: 12px 16px; border-radius: 16px; font-size: 0.85rem; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 8px;">
               <span style="color: rgba(255, 255, 255, 0.85); min-width: 85px;">${dateLabel}</span>
-              <span style="display: flex; align-items: center; gap: 6px; flex: 1;">${info.iconePhase} ${info.nomPhase}</span>
+              <span style="display: flex; align-items: center; gap: 8px; flex: 1;">${info.iconePhase} ${info.nomPhase}</span>
               <strong style="color: #38bdf8;">${Math.round(pVal * 100)}%</strong>
             </div>
           `;
@@ -313,7 +313,7 @@ function configurerInteractionsModales() {
           </p>
           ${htmlProchainesEtapes}
         </div>
-      `,
+      `
       );
     };
   }
@@ -356,11 +356,11 @@ function configurerInteractionsModales() {
         const badgeColor = estPluie ? "#38bdf8" : "rgba(255, 255, 255, 0.5)";
 
         cartesHoraires.push(`
-          <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 12px;">
-            <span style="font-weight: 600; font-size: 0.9rem; width: 55px; color: rgba(255, 255, 255, 0.9);">${heureStr}</span>
-            <span style="font-size: 1.4rem; text-align: center; width: 35px;">${icone}</span>
-            <span style="font-weight: 700; font-size: 1rem; width: 50px; text-align: right; color: #fff;">${temp}°C</span>
-            <span style="font-size: 0.75rem; background: ${badgeBg}; color: ${badgeColor}; padding: 3px 8px; border-radius: 10px; min-width: 52px; text-align: center; font-weight: 500;">
+          <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); padding: 12px 16px; border-radius: 16px;">
+            <span style="font-weight: 600; font-size: 0.95rem; width: 55px; color: rgba(255, 255, 255, 0.9);">${heureStr}</span>
+            <span style="font-size: 1.5rem; text-align: center; width: 40px;">${icone}</span>
+            <span style="font-weight: 700; font-size: 1.1rem; width: 50px; text-align: right; color: #fff;">${temp}°C</span>
+            <span style="font-size: 0.8rem; background: ${badgeBg}; color: ${badgeColor}; padding: 4px 10px; border-radius: 12px; min-width: 55px; text-align: center; font-weight: 600;">
               💧 ${proba}%
             </span>
           </div>
@@ -370,7 +370,7 @@ function configurerInteractionsModales() {
       ouvrirModale(
         "Évolution des 24 prochaines heures",
         `
-        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+        <div style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
           ${cartesHoraires.join("")}
         </div>
       `
@@ -565,10 +565,10 @@ export function afficherFriseHoraire(hourly, timezone) {
     }
 
     cartesHoraires.push(`
-      <div>
-        <span style="font-size: 0.8rem; opacity: 0.8;">${heureStr}</span>
-        <span style="font-size: 1.2rem; margin: 2px 0;">${icone}</span>
-        <strong style="font-size: 0.95rem;">${temp}°</strong>
+      <div class="hourly-item">
+        <span style="font-size: 0.85rem; opacity: 0.8;">${heureStr}</span>
+        <span style="font-size: 1.5rem; margin: 6px 0;">${icone}</span>
+        <strong style="font-size: 1rem;">${temp}°</strong>
       </div>
     `);
   }
