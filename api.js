@@ -28,8 +28,7 @@ export async function fetchMeteoComplete(latitude, longitude) {
 
   // Adapter les valeurs pour l'API Open-Meteo
   const tempUnit =
-    prefs.uniteTemp === "F" ||
-    prefs.uniteTemp.toLowerCase().includes("fahrenheit")
+    prefs.uniteTemp === "F" || prefs.uniteTemp.toLowerCase().includes("fahrenheit")
       ? "fahrenheit"
       : "celsius";
   const windUnit = prefs.uniteVent; // "kmh", "mph", "ms", "knots"
@@ -37,7 +36,8 @@ export async function fetchMeteoComplete(latitude, longitude) {
   // URL avec les paramètres dynamiques d'unités
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&hourly=temperature_2m,precipitation_probability,weather_code,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&temperature_unit=${tempUnit}&windspeed_unit=${windUnit}&timezone=auto`;
 
-  const response = await fetch(url);
+  // CORRECTION : Utilisation de l'utilitaire sécurisé au lieu d'un fetch standard
+  const response = await fetchAvecTimeout(url);
   if (!response.ok) {
     throw new Error("Erreur réseau lors de la récupération de la météo.");
   }
@@ -46,14 +46,21 @@ export async function fetchMeteoComplete(latitude, longitude) {
 
 export async function fetchNomParCoordonnees(lat, lon) {
   try {
-    // zoom=3 cible directement l'échelle des pays
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&accept-language=fr`;
+    // CORRECTION : zoom=12 cible l'échelle des villes/agglomérations
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=12&accept-language=fr`;
     const reponse = await fetchAvecTimeout(url, 5000);
     const data = await reponse.json();
 
     if (data && data.address) {
-      // Retourne le nom du pays
-      return data.address.country || "Pays inconnu";
+      // Retourne la ville, le village, ou à défaut le pays
+      return (
+        data.address.city ||
+        data.address.town ||
+        data.address.village ||
+        data.address.municipality ||
+        data.address.country ||
+        "Position actuelle"
+      );
     }
     return "Position actuelle";
   } catch (err) {
