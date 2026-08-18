@@ -19,6 +19,7 @@ const suggestionsList = document.querySelector("#suggestions-list");
 const favorisBar = document.querySelector("#favoris-bar");
 const messageStatut = document.querySelector("#message-statut");
 
+// --- VARIABLES GLOBALES ---
 let villeActuelleNom = "";
 let debounceTimer = null;
 let indexSuggestion = -1;
@@ -70,9 +71,7 @@ function setBoutonChargement(actif) {
 }
 
 if (btnRechercher) {
-  btnRechercher.addEventListener("click", () =>
-    chargerMeteoParNom(inputVille.value)
-  );
+  btnRechercher.addEventListener("click", () => chargerMeteoParNom(inputVille.value));
 }
 
 if (btnGeoloc) {
@@ -81,13 +80,7 @@ if (btnGeoloc) {
 
 // --- FAVORIS ---
 function getFavoris() {
-  return (
-    JSON.parse(localStorage.getItem("favoris_meteo")) || [
-      "Ichy",
-      "Bois-le-Roi",
-      "Paris",
-    ]
-  );
+  return JSON.parse(localStorage.getItem("favoris_meteo")) || ["Ichy", "Bois-le-Roi", "Paris"];
 }
 
 function sauvegarderFavoris(favoris) {
@@ -108,28 +101,29 @@ function actualiserBoutonFavori() {
   }
 }
 
-function saveWeatherData(data) {
-  const cachePayload = {
-    timestamp: Date.now(),
-    data: data,
-  };
-  localStorage.setItem("last_weather_cache", JSON.stringify(cachePayload));
+if (btnFav) {
+  btnFav.addEventListener("click", () => {
+    if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
+    const favoris = getFavoris();
+    const index = favoris.indexOf(villeActuelleNom);
+
+    if (index === -1) {
+      favoris.push(villeActuelleNom);
+    } else {
+      favoris.splice(index, 1);
+    }
+    sauvegarderFavoris(favoris);
+  });
 }
 
 function afficherFavoris() {
   const favoris = getFavoris();
-  favorisBar.innerHTML =
-    favoris
-      .map(
-        (v) => `
+  favorisBar.innerHTML = favoris.map(v => `
     <span class="fav-badge">
       <span class="fav-label">${v}</span>
       <span class="fav-delete" data-ville="${v}" title="Supprimer">×</span>
     </span>
-  `
-      )
-      .join("") +
-    `<span class="fav-badge" id="btn-comparateur" style="background: #3498db; color: white; cursor: pointer;" title="Comparer les favoris">📊 Comparer</span>`;
+  `).join("") + `<span class="fav-badge" id="btn-comparateur" style="background: #3498db; color: white; cursor: pointer;" title="Comparer les favoris">📊 Comparer</span>`;
 
   document.querySelectorAll(".fav-label").forEach((label) => {
     label.addEventListener("click", () => {
@@ -190,19 +184,13 @@ async function ouvrirComparateurFavoris() {
   body.innerHTML = resultatsHtml;
 }
 
-if (btnFav) {
-  btnFav.addEventListener("click", () => {
-    if (!villeActuelleNom || villeActuelleNom === "Ma position") return;
-    const favoris = getFavoris();
-    const index = favoris.indexOf(villeActuelleNom);
-
-    if (index === -1) {
-      favoris.push(villeActuelleNom);
-    } else {
-      favoris.splice(index, 1);
-    }
-    sauvegarderFavoris(favoris);
-  });
+// --- GESTION DES DONNÉES & CACHE ---
+function saveWeatherData(data) {
+  const cachePayload = {
+    timestamp: Date.now(),
+    data: data,
+  };
+  localStorage.setItem("last_weather_cache", JSON.stringify(cachePayload));
 }
 
 // --- CHARGEMENT MÉTÉO ---
@@ -216,17 +204,11 @@ async function chargerMeteoParVilleObjet(ville) {
     villeActuelleNom = ville.name;
     inputVille.value = "";
 
-    const estUnPays =
-      ville.feature_code === "PCLI" ||
-      (ville.country && ville.country.toLowerCase() === ville.name.toLowerCase());
-
+    const estUnPays = ville.feature_code === "PCLI" || (ville.country && ville.country.toLowerCase() === ville.name.toLowerCase());
     let nomComplet = ville.name;
 
     if (!estUnPays) {
-      const codePostal =
-        ville.postcodes && ville.postcodes.length > 0
-          ? ` (${ville.postcodes[0]})`
-          : "";
+      const codePostal = ville.postcodes && ville.postcodes.length > 0 ? ` (${ville.postcodes[0]})` : "";
       const pays = ville.country ? `, ${ville.country}` : "";
       nomComplet = `${ville.name}${codePostal}${pays}`;
     }
@@ -234,7 +216,6 @@ async function chargerMeteoParVilleObjet(ville) {
     const data = await fetchMeteoComplete(ville.latitude, ville.longitude);
 
     saveWeatherData(data);
-
     afficherMeteoActuelle(data, nomComplet);
     afficherPrevisions(data.daily);
     afficherAlertePluie(data.hourly);
@@ -295,17 +276,11 @@ inputVille.addEventListener("input", () => {
         return;
       }
 
-      suggestionsList.innerHTML = suggestionsActuelles
-        .map((s, idx) => {
-          const cp =
-            s.postcodes && s.postcodes.length > 0 ? ` (${s.postcodes[0]})` : "";
-          const suffixePays =
-            s.country && s.country.toLowerCase() !== s.name.toLowerCase()
-              ? `, ${s.country}`
-              : "";
-          return `<div class="suggestion-item" data-index="${idx}">${s.name}${cp}${suffixePays}</div>`;
-        })
-        .join("");
+      suggestionsList.innerHTML = suggestionsActuelles.map((s, idx) => {
+        const cp = s.postcodes && s.postcodes.length > 0 ? ` (${s.postcodes[0]})` : "";
+        const suffixePays = s.country && s.country.toLowerCase() !== s.name.toLowerCase() ? `, ${s.country}` : "";
+        return `<div class="suggestion-item" data-index="${idx}">${s.name}${cp}${suffixePays}</div>`;
+      }).join("");
 
       suggestionsList.style.display = "block";
 
@@ -360,12 +335,11 @@ inputVille.addEventListener("keydown", (e) => {
 
 function mettreAJourSelection(items) {
   items.forEach((item, index) => {
-    item.style.background =
-      index === indexSuggestion ? "#f1f2f6" : "transparent";
+    item.style.background = index === indexSuggestion ? "#f1f2f6" : "transparent";
   });
 }
 
-// --- GÉOLOCALISATION & DIVERS ---
+// --- GÉOLOCALISATION & SERVICE WORKER ---
 function lancerGeolocalisation() {
   setBoutonChargement(true);
   navigator.geolocation.getCurrentPosition(
@@ -401,6 +375,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
+// --- PLEIN ÉCRAN ---
 const btnFullscreen = document.querySelector("#btn-fullscreen");
 if (btnFullscreen) {
   btnFullscreen.addEventListener("click", () => {
@@ -445,9 +420,7 @@ if (btnCloseDetails && modalDetails) {
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    document
-      .querySelectorAll(".modal")
-      .forEach((m) => (m.style.display = "none"));
+    document.querySelectorAll(".modal").forEach((m) => (m.style.display = "none"));
     suggestionsList.style.display = "none";
   }
 });
