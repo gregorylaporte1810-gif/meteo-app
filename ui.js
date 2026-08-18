@@ -340,7 +340,9 @@ function configurerInteractionsModales() {
       const cartesHoraires = [];
       for (let i = safeStartIndex; i < safeStartIndex + 24 && i < hourly.time.length; i++) {
         const dateObj = new Date(hourly.time[i]);
-        const heureStr = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+        // Remplace l'ancienne définition de heureStr par celle-ci :
+const heureStr = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit" }).replace(" ", "");
+
         const code = hourly.weather_code[i];
         const temp = Math.round(hourly.temperature_2m[i]);
         const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
