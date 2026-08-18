@@ -124,14 +124,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#description").textContent = codeInfo.texte;
   document.querySelector("#icone").textContent = iconeAffichee;
 
-  genererConseilsPratiques(
-    current.temperature_2m,
-    codeMeteo,
-    current.wind_speed_10m,
-    uvActuel,
-    isDay,
-  );
-
   adapterFond(codeMeteo, isDay);
   setWeatherEffect(codeMeteo);
 
@@ -147,21 +139,6 @@ export function afficherMeteoActuelle(data, nomLieu) {
 
   afficherFriseHoraire(data.hourly, data.timezone);
   configurerInteractionsModales();
-}
-
-function genererConseilsPratiques(temp, code, vent, uv, isDay) {
-  const conseils = [];
-  conseils.push("👕 Tenue : Tenue légère et respirante.");
-  if (isDay && ![51, 61, 63, 95].includes(code) && vent < 25) {
-    conseils.push("🏃 Activité : Idéal pour courir (route ou trail).");
-  } else {
-    conseils.push("🏃 Activité : Privilégier les activités en intérieur.");
-  }
-
-  document.querySelector("#conseils-box").innerHTML = `
-    <div class="conseils-title">Conseils :</div>
-    ${conseils.map((c) => `<div>${c}</div>`).join("")}
-  `;
 }
 
 export function afficherPrevisions(daily) {
@@ -562,7 +539,6 @@ export function afficherFriseHoraire(hourly, timezone) {
   const conteneur = document.querySelector(".hourly-scroll-container") || document.querySelector("#hero-meteo")?.nextElementSibling;
   if (!hourly || !hourly.time || !conteneur) return;
 
-  // S'assure que le conteneur possède la bonne classe CSS
   conteneur.classList.add("hourly-scroll-container");
 
   const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
