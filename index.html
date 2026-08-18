@@ -19,7 +19,6 @@
 </head>
 
 <body>
-  <!---->
   <div id="weather-widget" role="region" aria-live="polite" aria-label="Prévisions météo actuelles"
     style="display: none;"></div>
 
@@ -48,10 +47,10 @@
 
     <!-- Barre des favoris & Comparaison -->
     <div id="favoris-bar" class="favoris-bar">
+      <div class="fav-badge">Bois-le-Roi <span class="fav-delete">✕</span></div>
       <div class="fav-badge">Paris <span class="fav-delete">✕</span></div>
       <div class="fav-badge">Ichy <span class="fav-delete">✕</span></div>
-      <div class="fav-badge">Bois-le-Roi <span class="fav-delete">✕</span></div>
-      <div class="fav-badge compare-badge">📊 Compare</div>
+      <div class="fav-badge compare-badge">📊 Comparer</div>
     </div>
 
     <p id="message-statut" class="status-message" style="display: none;">Chargement...</p>
@@ -59,24 +58,43 @@
     <!-- Bloc météo principal -->
     <div id="bloc-meteo" class="weather-info">
 
-      <!-- En-tête de la ville -->
+      <!-- En-tête épuré -->
       <div class="header-city">
         <div class="city-header-wrapper">
-          <div id="ville" class="city-name">Ichy (77890), France</div>
-          <button id="btn-toggle-favori" class="btn-fav" title="Favori">🤍</button>
+          <div id="ville" class="city-name">Marseille, France</div>
+          <button id="btn-toggle-favori" class="btn-fav" title="Favori">⭐</button>
         </div>
-        <div id="date-heure" class="date-text">Lundi 17 août à 09:56:20</div>
+        <div id="date-heure" class="date-text">Mardi 18 août à 13:23</div>
       </div>
 
-      <!-- Prévisions 7 jours + Graphique de température avec points -->
+      <!-- Hero Météo (Placé en haut pour vision immédiate) -->
+      <div id="hero-meteo" class="hero-meteo glass-panel clickable">
+        <div id="icone" class="weather-icon">🌤️</div>
+        <div id="temperature" class="temp">34°C</div>
+        <div id="description" class="description">Principalement dégagé</div>
+      </div>
+
+      <!-- Frise horaire défilante (Scroll horizontal) -->
+      <div class="hourly-section glass-panel">
+        <div id="previsions-horaires" class="hourly-scroll-container">
+          <div class="hourly-item"><span>14h</span><span>🌤️</span><strong>35°</strong></div>
+          <div class="hourly-item"><span>15h</span><span>🌤️</span><strong>34°</strong></div>
+          <div class="hourly-item"><span>16h</span><span>🌤️</span><strong>32°</strong></div>
+          <div class="hourly-item"><span>17h</span><span>🌤️</span><strong>29°</strong></div>
+          <div class="hourly-item"><span>18h</span><span>🌤️</span><strong>27°</strong></div>
+          <div class="hourly-item"><span>19h</span><span>🌤️</span><strong>25°</strong></div>
+        </div>
+      </div>
+
+      <!-- Prévisions 7 jours -->
       <div class="forecast-section glass-panel">
         <div id="previsions-7-jours" class="previsions-grid">
-          <div class="prevision-item"><span>mar.</span><span>⛅</span><span>28°/18°</span></div>
-          <div class="prevision-item"><span>mer.</span><span>🌧️</span><span>23°/18°</span></div>
-          <div class="prevision-item"><span>jeu.</span><span>☁️</span><span>26°/16°</span></div>
-          <div class="prevision-item"><span>ven.</span><span>☁️</span><span>25°/16°</span></div>
-          <div class="prevision-item"><span>sam.</span><span>🌧️</span><span>22°/15°</span></div>
-          <div class="prevision-item"><span>dim.</span><span>🌧️</span><span>23°/17°</span></div>
+          <div class="prevision-item"><span>mer.</span><span>☁️</span><span>32°/26°</span></div>
+          <div class="prevision-item"><span>jeu.</span><span>⛈️</span><span>32°/26°</span></div>
+          <div class="prevision-item"><span>ven.</span><span>🌧️</span><span>28°/22°</span></div>
+          <div class="prevision-item"><span>sam.</span><span>☀️</span><span>27°/21°</span></div>
+          <div class="prevision-item"><span>dim.</span><span>☁️</span><span>27°/21°</span></div>
+          <div class="prevision-item"><span>lun.</span><span>🌧️</span><span>27°/23°</span></div>
         </div>
         <div class="weather-curve-container">
           <svg class="weather-curve" viewBox="0 0 350 45" preserveAspectRatio="none">
@@ -87,67 +105,50 @@
                 <stop offset="100%" stop-color="#ef4444" />
               </linearGradient>
             </defs>
-            <path d="M 20 30 Q 85 10, 150 25 T 280 15 T 330 30" fill="none" stroke="url(#curve-gradient)"
-              stroke-width="3" />
-            <circle cx="20" cy="30" r="3.5" fill="#60a5fa" />
-            <circle cx="75" cy="18" r="3.5" fill="#3b82f6" />
+            <path d="M 20 20 Q 85 10, 150 25 T 280 30 T 330 30" fill="none" stroke="url(#curve-gradient)" stroke-width="3" />
+            <circle cx="20" cy="20" r="3.5" fill="#ef4444" />
+            <circle cx="75" cy="20" r="3.5" fill="#ef4444" />
             <circle cx="150" cy="25" r="3.5" fill="#f59e0b" />
-            <circle cx="215" cy="20" r="3.5" fill="#f59e0b" />
-            <circle cx="280" cy="15" r="3.5" fill="#ef4444" />
-            <circle cx="330" cy="30" r="3.5" fill="#ef4444" />
+            <circle cx="215" cy="30" r="3.5" fill="#f59e0b" />
+            <circle cx="280" cy="30" r="3.5" fill="#60a5fa" />
+            <circle cx="330" cy="30" r="3.5" fill="#60a5fa" />
           </svg>
           <div class="curve-rain-indicators">
-            <span>💧 10%</span><span>💧 60%</span><span>💧 30%</span><span>💧 10%</span><span>💧 10%</span><span>💧
-              10%</span>
+            <span>💧 10%</span><span>💧 60%</span><span>💧 30%</span><span>💧 10%</span><span>💧 10%</span><span>💧 10%</span>
           </div>
         </div>
       </div>
 
-      <!-- Bloc Lune cliquable -->
-      <div class="row-card glass-panel clickable" id="card-lune" title="Voir les détails et prévisions lunaires">
-        <div class="row-content">
-          <span id="lune-icone" class="lune-icon">🌘</span>
-          <div>
-            <div class="label-text">Phase lunaire :</div>
-            <div id="lune-texte" class="value-text">Premier croissant</div>
-          </div>
-        </div>
-        <button class="btn-details">Détails</button>
-      </div>
-
-      <!-- Triple Grille : Air | Pression | Ressenti -->
+      <!-- Grille des métriques principales (2x2) -->
       <div class="triple-grid">
-        <div class="glass-panel mini-card clickable" id="card-air" title="Qualité de l'air">
-          <span class="detail-label">Qualité de l'air</span>
-          <div class="air-gauge-wrapper">
-            <div class="air-arc-mini"></div>
-            <span id="qualite-air" class="detail-value air-status-good">Bon</span>
-          </div>
-        </div>
-        <div class="glass-panel mini-card clickable" id="card-pression" title="Pression atmosphérique">
+        <div class="glass-panel mini-card clickable" id="card-pression">
           <span class="detail-label">Pression</span>
           <div class="metric-icon-val">
             <span>⏱️</span>
             <span id="pression" class="detail-value">1018 hPa</span>
           </div>
         </div>
-        <div class="glass-panel mini-card clickable" id="card-ressenti" title="Température ressentie">
+        <div class="glass-panel mini-card clickable" id="card-ressenti">
           <span class="detail-label">Ressenti</span>
           <div class="metric-icon-val">
             <span>🌡️</span>
-            <span id="ressenti" class="detail-value">--°C</span>
+            <span id="ressenti" class="detail-value">31°C</span>
           </div>
         </div>
-      </div>
-
-      <!-- Bloc central cliquable -->
-      <div id="hero-meteo" class="hero-meteo clickable" title="Cliquez pour voir les prévisions heure par heure">
-        <div id="icone" class="weather-icon">☁️</div>
-        <div id="temperature" class="temp">22°C</div>
-        <div id="description" class="description">Couvert</div>
-        <button class="btn-evolution">
-          📈 Voir l'évolution par heure
-        </button>
+        <div class="glass-panel mini-card clickable" id="card-vent">
+          <span class="detail-label">Vent</span>
+          <div class="metric-icon-val">
+            <span>💨</span>
+            <span id="vent" class="detail-value">24.2 km/h</span>
+          </div>
+        </div>
+        <div class="glass-panel mini-card clickable" id="card-humidite">
+          <span class="detail-label">Humidité</span>
+          <div class="metric-icon-val">
+            <span>💧</span>
+            <span id="humidite" class="detail-value">28%</span>
+          </div>
+        </div>
       </div>
 
       <div id="alerte-pluie" class="alerte-pluie"></div>
@@ -163,50 +164,32 @@
       <div id="stroller-badge" class="stroller-banner glass-panel">
         <span class="stroller-text">Conditions Poussette : Excellentes. 👶</span>
         <div class="stroller-progress-track">
-          <div class="stroller-progress-bar"></div>
+          <div class="stroller-progress-bar" style="width: 90%;"></div>
         </div>
       </div>
 
-      <!-- Grille interactive des détails -->
-      <div class="details-grid">
-        <div class="detail-item glass-panel clickable" id="card-vent" title="Voir les détails du vent">
-          <span class="detail-label">💨 Vent</span>
-          <div class="detail-row-space">
-            <span id="vent" class="detail-value">12.6 km/h</span>
-            <div class="compass-mini-icon">🧭</div>
+      <!-- Tiroir extensible "Plus d'infos" -->
+      <details class="glass-panel accordion-details">
+        <summary class="accordion-summary">Plus d'infos</summary>
+        <div class="accordion-content">
+          <div class="info-row">
+            <span>🌅 Soleil :</span>
+            <span id="soleil-apercu">20:37</span>
+          </div>
+          <div class="info-row">
+            <span>☀️ Indice UV :</span>
+            <span id="indice-uv">7 / 11</span>
+          </div>
+          <div class="info-row">
+            <span>🌘 Phase lunaire :</span>
+            <span id="lune-texte">Premier croissant</span>
+          </div>
+          <div class="info-row">
+            <span>🌱 Qualité de l'air :</span>
+            <span id="qualite-air" class="air-status-good">Bon</span>
           </div>
         </div>
-        <div class="detail-item glass-panel clickable" id="card-humidite" title="Voir les détails de l'air">
-          <span class="detail-label">💧 Humidité</span>
-          <div class="detail-row-space">
-            <span id="humidite" class="detail-value">66%</span>
-            <svg width="34" height="18" viewBox="0 0 34 18">
-              <path d="M2 14 Q 10 2, 18 12 T 32 4" fill="none" stroke="#38bdf8" stroke-width="2.5" />
-            </svg>
-          </div>
-        </div>
-        <div class="detail-item glass-panel clickable" id="card-soleil" title="Voir le lever et coucher du soleil">
-          <span class="detail-label">🌅 Soleil</span>
-          <div class="detail-row-space">
-            <span id="soleil-apercu" class="detail-value">21:00</span>
-            <svg width="34" height="18" viewBox="0 0 34 18">
-              <path d="M2 16 Q 12 16, 17 8 T 32 2" fill="none" stroke="#f59e0b" stroke-width="2.5" />
-            </svg>
-          </div>
-        </div>
-        <div class="detail-item glass-panel clickable" id="card-uv" title="Voir les détails UV">
-          <span class="detail-label">☀️ Indice UV</span>
-          <span id="indice-uv" class="detail-value">3 / 11</span>
-          <div class="uv-spectrum-bar">
-            <div class="uv-spectrum-segment seg-1"></div>
-            <div class="uv-spectrum-segment seg-2"></div>
-            <div class="uv-spectrum-segment seg-3"></div>
-            <div class="uv-spectrum-segment seg-4"></div>
-            <div class="uv-spectrum-segment seg-5"></div>
-            <div class="uv-spectrum-segment seg-6"></div>
-          </div>
-        </div>
-      </div>
+      </details>
 
     </div>
   </div>
@@ -238,7 +221,6 @@
       </div>
 
       <form id="form-preferences" class="modal-body">
-        <!-- 1. Unités de mesure -->
         <fieldset>
           <legend>📏 Unités de mesure</legend>
           <label>
@@ -258,7 +240,6 @@
           </label>
         </fieldset>
 
-        <!-- 2. Comportement au démarrage -->
         <fieldset>
           <legend>🚀 Démarrage</legend>
           <label>
@@ -271,7 +252,6 @@
           </label>
         </fieldset>
 
-        <!-- 3. Apparence & Thème -->
         <fieldset>
           <legend>🎨 Apparence</legend>
           <label>
@@ -284,7 +264,6 @@
           </label>
         </fieldset>
 
-        <!-- 4. Notifications & Alertes -->
         <fieldset>
           <legend>🔔 Notifications & Alertes</legend>
           <label>
