@@ -560,7 +560,10 @@ function verifierEtAfficherAlertes(meteoActuelle) {
 
 export function afficherFriseHoraire(hourly, timezone) {
   const conteneur = document.querySelector(".hourly-scroll-container") || document.querySelector("#hero-meteo")?.nextElementSibling;
-  if (!hourly || !hourly.time) return;
+  if (!hourly || !hourly.time || !conteneur) return;
+
+  // S'assure que le conteneur possède la bonne classe CSS
+  conteneur.classList.add("hourly-scroll-container");
 
   const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   const annee = nowLocal.getFullYear();
@@ -586,7 +589,7 @@ export function afficherFriseHoraire(hourly, timezone) {
     }
 
     cartesHoraires.push(`
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; text-align: center;">
+      <div>
         <span style="font-size: 0.8rem; opacity: 0.8;">${heureStr}</span>
         <span style="font-size: 1.2rem; margin: 2px 0;">${icone}</span>
         <strong style="font-size: 0.95rem;">${temp}°</strong>
@@ -594,10 +597,5 @@ export function afficherFriseHoraire(hourly, timezone) {
     `);
   }
 
-  if (conteneur) {
-    conteneur.style.display = "flex";
-    conteneur.style.justifyContent = "space-between";
-    conteneur.style.alignItems = "center";
-    conteneur.innerHTML = cartesHoraires.join("");
-  }
+  conteneur.innerHTML = cartesHoraires.join("");
 }
