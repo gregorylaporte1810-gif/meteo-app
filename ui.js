@@ -159,8 +159,23 @@ export function afficherMeteoActuelle(data, nomLieu) {
   document.querySelector("#bloc-meteo").style.display = "block";
   document.querySelector("#message-statut").style.display = "none";
 
+    // ... (fin de la fonction afficherMeteoActuelle)
+  verifierEtAfficherAlertes({
+    temperature: current.temperature_2m,
+    vent: current.wind_speed_10m,
+    precipitation: current.precipitation || current.rain || current.showers || 0,
+  });
+
+  document.querySelector("#bloc-meteo").style.display = "block";
+  document.querySelector("#message-statut").style.display = "none";
+
+  // APPEL DE LA FRISE HORIZONTALE ICI :
+  afficherFriseHoraire(data.hourly, data.timezone);
+
   configurerInteractionsModales();
 }
+
+  
 
 function genererConseilsPratiques(temp, code, vent, uv, isDay) {
   const conseils = [];
@@ -358,51 +373,38 @@ function configurerInteractionsModales() {
   const heroMeteo = document.querySelector("#hero-meteo");
   if (heroMeteo) {
     heroMeteo.onclick = () => {
-      if (
-        !donneesGlobales ||
-        !donneesGlobales.hourly ||
-        !donneesGlobales.hourly.time
-      )
-        return;
+      if (!donneesGlobales || !donneesGlobales.hourly || !donneesGlobales.hourly.time) return;
 
       const hourly = donneesGlobales.hourly;
-      const maintenant = new Date();
-      const startIndex = hourly.time.findIndex(
-        (t) => new Date(t) >= maintenant,
-      );
-      const safeStartIndex = startIndex !== -1 ? startIndex : 0;
+      const timezone = donneesGlobales.timezone;
+
+      // Création de l'heure cible synchronisée sur le fuseau de la ville
+      const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+      const annee = nowLocal.getFullYear();
+      const mois = String(nowLocal.getMonth() + 1).padStart(2, "0");
+      const jour = String(nowLocal.getDate()).padStart(2, "0");
+      const heure = String(nowLocal.getHours()).padStart(2, "0");
+      const cibleStr = `${annee}-${mois}-${jour}T${heure}:00`;
+
+      let safeStartIndex = hourly.time.findIndex(t => t >= cibleStr);
+      if (safeStartIndex === -1) safeStartIndex = 0;
 
       const cartesHoraires = [];
-      for (
-        let i = safeStartIndex;
-        i < safeStartIndex + 24 && i < hourly.time.length;
-        i++
-      ) {
+      for (let i = safeStartIndex; i < safeStartIndex + 24 && i < hourly.time.length; i++) {
         const dateObj = new Date(hourly.time[i]);
-        const heureStr = dateObj.toLocaleTimeString("fr-FR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        const heureStr = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
         const code = hourly.weather_code[i];
         const temp = Math.round(hourly.temperature_2m[i]);
-        const proba = hourly.precipitation_probability
-          ? hourly.precipitation_probability[i]
-          : 0;
+        const proba = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
 
-        const isDay = hourly.is_day
-          ? hourly.is_day[i]
-          : dateObj.getHours() >= 7 && dateObj.getHours() < 22
-            ? 1
-            : 0;
+        const isDay = hourly.is_day ? hourly.is_day[i] : (dateObj.getHours() >= 7 && dateObj.getHours() < 22 ? 1 : 0);
         let icone = (codesMeteo[code] || {}).icone || "🌡️";
         if (!isDay && [0, 1, 2].includes(code)) {
           icone = code === 2 ? "☁️" : "🌙";
         }
 
         const estPluie = proba >= 25;
-        const badgeBg = estPluie
-          ? "rgba(56, 189, 248, 0.2)"
-          : "rgba(255, 255, 255, 0.05)";
+        const badgeBg = estPluie ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.05)";
         const badgeColor = estPluie ? "#38bdf8" : "rgba(255, 255, 255, 0.5)";
 
         cartesHoraires.push(`
@@ -423,9 +425,11 @@ function configurerInteractionsModales() {
         <div style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
           ${cartesHoraires.join("")}
         </div>
-      `,
+      `
       );
     };
+  }
+
   }
 
   // Autres cartes interactives
@@ -586,8 +590,54 @@ export function evaluateStrollerWalk(temp, weatherCode, windSpeed) {
   }
 }
 
-function verifierEtAfficherAlertes(meteoActuelle) {
+function verifierEtAfficherAlertes(meteoActuelle) {ça
   const banner = document.querySelector("#alert-banner");
   if (!banner) return;
   banner.style.display = "none";
 }
+
+export function afficherFriseHoraire(hourly, timezone) {
+  const conteneur = document.querySelector(".hourly-scroll-container");
+  if (!conteneur || !hourly || !hourly.time) return;
+
+  // Calcul fiable de l'heure locale de la ville recherchée
+  const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+  const annee = nowLocal.getFullYear();
+  const mois = String(nowLocal.getMonth() + 1).padStart(2, "0");
+  const jour = String(nowLocal.getDate()).padStart(2, "0");
+  const heure = String(nowLocal.getHours()).padStart(2, "0");
+  
+  // Format Open-Meteo exact : YYYY-MM-DDTHH:00
+  const cibleStr = `${annee}-${mois}-${jour}T${heure}:00`;
+
+  let startIndex = hourly.time.findIndex((t) => t >= cibleStr);
+  if (startIndex === -1) startIndex = 0;
+
+  const cartesHoraires = [];
+  
+  // Générer les 24 prochaines heures
+  for (let i = startIndex; i < startIndex + 24 && i < hourly.time.length; i++) {
+    const dateObj = new Date(hourly.time[i]);
+    const heureStr = i === startIndex ? "Maint." : dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit" }) + "h";
+    const temp = Math.round(hourly.temperature_2m[i]);
+    const code = hourly.weather_code[i];
+
+    const isDay = hourly.is_day ? hourly.is_day[i] : (dateObj.getHours() >= 7 && dateObj.getHours() < 21 ? 1 : 0);
+
+    let icone = (codesMeteo[code] || {}).icone || "🌡️";
+    if (isDay === 0 && [0, 1, 2].includes(code)) {
+      icone = code === 2 ? "☁️" : "🌙";
+    }
+
+    cartesHoraires.push(`
+      <div class="hourly-item">
+        <span>${heureStr}</span>
+        <span style="font-size: 1.3rem;">${icone}</span>
+        <strong>${temp}°</strong>
+      </div>
+    `);
+  }
+
+  conteneur.innerHTML = cartesHoraires.join("");
+}
+
