@@ -597,47 +597,44 @@ function verifierEtAfficherAlertes(meteoActuelle) {ça
 }
 
 export function afficherFriseHoraire(hourly, timezone) {
-  const conteneur = document.querySelector(".hourly-scroll-container");
-  if (!conteneur || !hourly || !hourly.time) return;
+  // On cible directement le conteneur parent de la frise sur ta capture
+  const conteneur = document.querySelector(".hourly-scroll-container") || document.querySelector("#hero-meteo")?.nextElementSibling;
+  if (!hourly || !hourly.time) return;
 
-  // Calcul fiable de l'heure locale de la ville recherchée
   const nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   const annee = nowLocal.getFullYear();
   const mois = String(nowLocal.getMonth() + 1).padStart(2, "0");
   const jour = String(nowLocal.getDate()).padStart(2, "0");
   const heure = String(nowLocal.getHours()).padStart(2, "0");
-  
-  // Format Open-Meteo exact : YYYY-MM-DDTHH:00
   const cibleStr = `${annee}-${mois}-${jour}T${heure}:00`;
 
   let startIndex = hourly.time.findIndex((t) => t >= cibleStr);
   if (startIndex === -1) startIndex = 0;
 
   const cartesHoraires = [];
-  
-  // Générer les 24 prochaines heures
-  for (let i = startIndex; i < startIndex + 24 && i < hourly.time.length; i++) {
+  for (let i = startIndex; i < startIndex + 6 && i < hourly.time.length; i++) {
     const dateObj = new Date(hourly.time[i]);
-    const heureStr = i === startIndex ? "Maint." : dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit" }) + "h";
+    const heureStr = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit" });
     const temp = Math.round(hourly.temperature_2m[i]);
     const code = hourly.weather_code[i];
 
     const isDay = hourly.is_day ? hourly.is_day[i] : (dateObj.getHours() >= 7 && dateObj.getHours() < 21 ? 1 : 0);
-
     let icone = (codesMeteo[code] || {}).icone || "🌡️";
     if (isDay === 0 && [0, 1, 2].includes(code)) {
       icone = code === 2 ? "☁️" : "🌙";
     }
 
     cartesHoraires.push(`
-      <div class="hourly-item">
-        <span>${heureStr}</span>
-        <span style="font-size: 1.3rem;">${icone}</span>
-        <strong>${temp}°</strong>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <span style="font-size: 0.8rem; opacity: 0.8;">${heureStr}</span>
+        <span style="font-size: 1.2rem;">${icone}</span>
+        <strong style="font-size: 0.95rem;">${temp}°</strong>
       </div>
     `);
   }
 
-  conteneur.innerHTML = cartesHoraires.join("");
+  // Si un conteneur dédié existe, on l'injecte, sinon on évite de casser le DOM
+  if (conteneur && conteneur.classList) {
+    conteneur.innerHTML = cartesHoraires.join("");
+  }
 }
-
